@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SECURE ACCESS TERMINAL</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --bg:#060909;
+    --panel:#0e1516;
+    --panel2:#121b1c;
+    --border:#1d2b2c;
+    --accent:#00ff9c;
+    --accent2:#39d0ff;
+    --text:#d7ffe9;
+    --dim:#6b8b82;
+    --danger:#ff4d6d;
+    --warn:#ffcc4d;
+    font-family: 'Consolas','Menlo','Courier New',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg); color:var(--text);
+    font-family: 'Consolas','Menlo','Courier New',monospace;
+    overflow:hidden;
+  }
+  ::selection{ background:var(--accent); color:#001b12; }
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+
+  #matrix-canvas{
+    position:fixed; inset:0; width:100%; height:100%; z-index:0; opacity:0.35;
+  }
+
+  /* ---------------- BOOT / LOADER ---------------- */
+  #boot-screen{
+    position:fixed; inset:0; z-index:20;
+    display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(ellipse at center, rgba(0,20,10,0.4), var(--bg) 75%);
+    transition:opacity .6s ease;
+  }
+  #boot-screen.hidden{ opacity:0; pointer-events:none; }
+  #boot-term{
+    width:min(640px, 90vw);
+    border:1px solid var(--border);
+    background:rgba(6,10,10,0.85);
+    padding:22px 24px;
+    box-shadow:0 0 40px rgba(0,255,156,0.08), inset 0 0 40px rgba(0,255,156,0.03);
+  }
+  #boot-term .line{
+    color:var(--accent); font-size:14px; line-height:1.9; white-space:pre-wrap;
+    text-shadow:0 0 6px rgba(0,255,156,0.5);
+  }
+  #boot-term .line.dim{ color:var(--dim); text-shadow:none; }
+  #boot-term .cursor{ display:inline-block; width:8px; background:var(--accent); animation:blink 1s steps(1) infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+  #boot-progress{
+    margin-top:14px; height:4px; width:100%; background:var(--border); overflow:hidden;
+  }
+  #boot-progress > div{ height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .25s linear; }
+
+  /* ---------------- LOGIN ---------------- */
+  #login-screen{
+    position:fixed; inset:0; z-index:10;
+    display:none; align-items:center; justify-content:center;
+  }
+  #login-screen.visible{ display:flex; }
+  .login-card{
+    position:relative; z-index:2;
+    width:min(380px, 90vw);
+    background:linear-gradient(180deg, var(--panel), var(--panel2));
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:32px 28px;
+    box-shadow:0 0 0 1px rgba(0,255,156,0.05), 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(0,255,156,0.06);
+  }
+  .login-card h1{
+    margin:0 0 4px; font-size:18px; letter-spacing:2px; color:var(--accent);
+    text-shadow:0 0 8px rgba(0,255,156,0.4);
+  }
+  .login-card p.sub{ margin:0 0 22px; font-size:11px; color:var(--dim); letter-spacing:1px; }
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:11px; color:var(--dim); margin-bottom:6px; letter-spacing:1px; text-transform:uppercase; }
+  .field input{
+    width:100%; padding:10px 12px; background:#060a0a; border:1px solid var(--border);
+    color:var(--text); font-family:inherit; font-size:14px; border-radius:3px; outline:none;
+  }
+  .field input:focus{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+  .btn{
+    width:100%; padding:11px; background:var(--accent); color:#03130b; border:none; border-radius:3px;
+    font-family:inherit; font-weight:bold; letter-spacing:1px; font-size:13px; cursor:pointer;
+    text-transform:uppercase; transition:filter .15s;
+  }
+  .btn:hover{ filter:brightness(1.15); }
+  .btn:disabled{ opacity:0.5; cursor:not-allowed; }
+  .btn.secondary{ background:transparent; border:1px solid var(--border); color:var(--text); }
+  .btn.danger{ background:var(--danger); color:#1a0006; }
+  .btn.small{ padding:6px 10px; font-size:11px; width:auto; }
+  #login-error{ margin-top:14px; font-size:12px; color:var(--danger); min-height:16px; white-space:pre-wrap; }
+
+  /* ---------------- APP SHELL (staff) ---------------- */
+  #app{
+    position:fixed; inset:0; z-index:5; display:none;
+    grid-template-columns:230px 1fr; height:100%;
+  }
+  #app.visible{ display:grid; }
+  #sidebar{
+    background:var(--panel); border-right:1px solid var(--border);
+    display:flex; flex-direction:column; overflow-y:auto;
+  }
+  #sidebar-header{
+    padding:16px; border-bottom:1px solid var(--border);
+  }
+  #sidebar-header .who{ font-size:13px; color:var(--accent); font-weight:bold; }
+  #sidebar-header .lvl{ font-size:10px; color:var(--dim); margin-top:2px; }
+  #sidebar-nav{ flex:1; padding:8px 0; }
+  .nav-item{
+    padding:10px 16px; font-size:13px; cursor:pointer; color:var(--text);
+    display:flex; align-items:center; justify-content:space-between; user-select:none;
+  }
+  .nav-item:hover{ background:var(--panel2); }
+  .nav-item.active{ background:var(--panel2); color:var(--accent); border-left:2px solid var(--accent); }
+  .nav-item.settings{ border-bottom:1px solid var(--border); margin-bottom:6px; padding-bottom:14px; }
+  .cat-children{ padding-left:14px; }
+  .subcat-label{ padding:6px 16px 2px; font-size:10px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; }
+  .thread-item{
+    padding:8px 16px; font-size:12px; cursor:pointer; color:var(--dim);
+    display:flex; align-items:center; gap:6px;
+  }
+  .thread-item:hover{ background:var(--panel2); color:var(--text); }
+  .thread-item.active{ color:var(--accent2); }
+  .thread-item .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent); flex-shrink:0; }
+  .thread-item.inactive .dot{ background:var(--dim); }
+  #sidebar-footer{ padding:12px 16px; border-top:1px solid var(--border); }
+
+  #main{ display:flex; flex-direction:column; overflow:hidden; position:relative; }
+  #main-empty{ margin:auto; color:var(--dim); font-size:13px; }
+
+  /* Settings */
+  #settings-view{ display:none; flex:1; overflow-y:auto; padding:24px 32px; }
+  #settings-view.visible{ display:block; }
+  .tabs{ display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:20px; }
+  .tab{ padding:9px 16px; font-size:12px; cursor:pointer; color:var(--dim); border-bottom:2px solid transparent; }
+  .tab:hover{ color:var(--text); }
+  .tab.active{ color:var(--accent); border-color:var(--accent); }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+  .panel-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:18px 20px; margin-bottom:18px;
+  }
+  .panel-card h3{ margin:0 0 14px; font-size:13px; color:var(--accent2); letter-spacing:1px; }
+  .form-row{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+  .form-row .field{ flex:1; min-width:160px; margin-bottom:0; }
+  .checkline{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text); margin-bottom:8px; }
+  table{ width:100%; border-collapse:collapse; font-size:12px; }
+  th{ text-align:left; color:var(--dim); font-weight:normal; padding:8px; border-bottom:1px solid var(--border); font-size:11px; text-transform:uppercase; letter-spacing:1px; }
+  td{ padding:8px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .pill{ display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; border:1px solid var(--border); color:var(--dim); }
+  .pill.on{ color:var(--accent); border-color:var(--accent); }
+  .row-actions{ display:flex; gap:6px; }
+  select{
+    width:100%; padding:9px 10px; background:#060a0a; border:1px solid var(--border);
+    color:var(--text); font-family:inherit; font-size:13px; border-radius:3px;
+  }
+  .msg-note{ font-size:11px; color:var(--dim); margin-top:8px; }
+  .form-error{ font-size:12px; color:var(--danger); margin-top:8px; min-height:14px; }
+  .form-success{ font-size:12px; color:var(--accent); margin-top:8px; min-height:14px; }
+
+  /* Chat */
+  #chat-view{ display:none; flex:1; flex-direction:column; overflow:hidden; }
+  #chat-view.visible{ display:flex; }
+  #chat-header{
+    padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;
+    background:var(--panel);
+  }
+  #chat-header .title{ font-size:14px; color:var(--accent); }
+  #chat-header .meta{ font-size:11px; color:var(--dim); margin-top:2px; }
+  #chat-header .actions{ display:flex; gap:8px; align-items:center; }
+  #chat-messages{ flex:1; overflow-y:auto; padding:18px 20px; display:flex; flex-direction:column; gap:10px; }
+  .msg{ max-width:70%; padding:9px 12px; border-radius:8px; font-size:13px; line-height:1.4; position:relative; }
+  .msg .meta{ font-size:10px; color:var(--dim); margin-bottom:3px; }
+  .msg.internal{ align-self:flex-start; background:var(--panel2); border:1px dashed var(--border); color:var(--dim); }
+  .msg.internal .meta{ color:var(--warn); }
+  .msg.client-reply{ align-self:flex-start; background:#0b241c; border:1px solid rgba(0,255,156,0.25); color:var(--text); }
+  .msg.client-reply .meta{ color:var(--accent); }
+  .msg.from-client{ align-self:flex-end; background:#0d1b26; border:1px solid rgba(57,208,255,0.25); }
+  .msg.from-client .meta{ color:var(--accent2); }
+  .msg .del{ position:absolute; top:2px; right:6px; font-size:10px; color:var(--danger); cursor:pointer; opacity:0.6; display:none; }
+  .msg:hover .del{ display:block; }
+  .msg .del:hover{ opacity:1; }
+  #chat-input-row{ padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:10px; align-items:center; background:var(--panel); }
+  #chat-input-row input[type=text]{ flex:1; padding:11px 12px; background:#060a0a; border:1px solid var(--border); color:var(--text); font-family:inherit; border-radius:4px; outline:none; }
+  #chat-input-row input[type=text]:focus{ border-color:var(--accent2); }
+  .reply-toggle{ display:flex; align-items:center; gap:6px; font-size:11px; color:var(--dim); white-space:nowrap; user-select:none; cursor:pointer; }
+  .reply-toggle input{ accent-color:var(--accent); }
+  .reply-toggle.on{ color:var(--accent); }
+
+  /* ---------------- CLIENT MINIMAL VIEW ---------------- */
+  #client-app{ position:fixed; inset:0; z-index:5; display:none; flex-direction:column; }
+  #client-app.visible{ display:flex; }
+  #client-header{ padding:16px 20px; border-bottom:1px solid var(--border); background:var(--panel); display:flex; justify-content:space-between; align-items:center; }
+  #client-header .title{ color:var(--accent); font-size:14px; letter-spacing:1px; }
+  #client-messages{ flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:10px; }
+  #client-input-row{ padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:10px; background:var(--panel); }
+  #client-input-row input{ flex:1; padding:12px; background:#060a0a; border:1px solid var(--border); color:var(--text); font-family:inherit; border-radius:4px; outline:none; }
+
+  .hidden-el{ display:none !important; }
+  .flex-between{ display:flex; justify-content:space-between; align-items:center; }
+  a.linklike{ color:var(--accent2); cursor:pointer; text-decoration:underline; font-size:11px; }
+</style>
+</head>
+<body>
+
+<canvas id="matrix-canvas"></canvas>
+
+<!-- ============ BOOT SCREEN ============ -->
+<div id="boot-screen">
+  <div id="boot-term">
+    <div id="boot-lines"></div>
+    <div id="boot-progress"><div id="boot-progress-bar"></div></div>
+  </div>
+</div>
+
+<!-- ============ LOGIN ============ -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1>SECURE ACCESS TERMINAL</h1>
+    <p class="sub">AUTHORIZED PERSONNEL ONLY // ENTER CREDENTIALS</p>
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="login-username" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="login-password" autocomplete="current-password" />
+    </div>
+    <button class="btn" id="login-btn">Connect</button>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<!-- ============ STAFF APP ============ -->
+<div id="app">
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <div class="who" id="who-name">—</div>
+      <div class="lvl" id="who-level">—</div>
+    </div>
+    <div id="sidebar-nav"></div>
+    <div id="sidebar-footer">
+      <button class="btn secondary small" id="logout-btn">Disconnect</button>
+    </div>
+  </div>
+  <div id="main">
+    <div id="main-empty">Select a category or chat from the left.</div>
+
+    <div id="settings-view">
+      <div class="tabs">
+        <div class="tab active" data-tab="accounts">Accounts</div>
+        <div class="tab" data-tab="roles">Roles</div>
+        <div class="tab" data-tab="categories">Categories</div>
+      </div>
+
+      <div class="tab-panel active" id="tab-accounts">
+        <div class="panel-card" id="create-account-card">
+          <h3>Create Account</h3>
+          <div class="form-row">
+            <div class="field">
+              <label>Account Type</label>
+              <select id="new-acc-type">
+                <option value="client">Client (chat-only)</option>
+                <option value="staff">Staff (full access)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Username</label>
+              <input type="text" id="new-acc-username" />
+            </div>
+            <div class="field">
+              <label>Password</label>
+              <input type="text" id="new-acc-password" />
+            </div>
+          </div>
+          <div class="form-row" id="new-acc-staff-row">
+            <div class="field">
+              <label>Role</label>
+              <select id="new-acc-role"></select>
+            </div>
+          </div>
+          <div class="form-row hidden-el" id="new-acc-client-row">
+            <div class="field">
+              <label>Category</label>
+              <select id="new-acc-category"></select>
+            </div>
+            <div class="field">
+              <label>Sub-category (optional)</label>
+              <select id="new-acc-subcategory"><option value="">—</option></select>
+            </div>
+          </div>
+          <button class="btn small" id="create-account-btn">Create</button>
+          <div class="form-error" id="create-account-error"></div>
+          <div class="form-success" id="create-account-success"></div>
+        </div>
+
+        <div class="panel-card">
+          <h3>All Accounts</h3>
+          <table>
+            <thead><tr><th>Username</th><th>Type</th><th>Role / Category</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="accounts-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-roles">
+        <div class="panel-card">
+          <h3>Create Role</h3>
+          <div class="form-row">
+            <div class="field"><label>Name</label><input type="text" id="new-role-name" /></div>
+            <div class="field">
+              <label>Level (1-8)</label>
+              <input type="number" id="new-role-level" min="1" max="8" value="1" />
+            </div>
+          </div>
+          <div class="checkline"><input type="checkbox" id="perm-write" checked /> <label for="perm-write">Can write in chats</label></div>
+          <div class="checkline"><input type="checkbox" id="perm-move" /> <label for="perm-move">Can move chats between categories</label></div>
+          <div class="checkline"><input type="checkbox" id="perm-subcat" /> <label for="perm-subcat">Can create sub-categories</label></div>
+          <div class="checkline"><input type="checkbox" id="perm-kick" /> <label for="perm-kick">Can kick (disable) accounts — level 9/10 only, auto-enabled</label></div>
+          <div class="checkline"><input type="checkbox" id="perm-delete" /> <label for="perm-delete">Can delete accounts/messages — level 9/10 only, auto-enabled</label></div>
+          <button class="btn small" id="create-role-btn">Create Role</button>
+          <div class="form-error" id="create-role-error"></div>
+          <div class="msg-note">Levels 9 and 10 are permanently reserved for the two founding accounts (Ramsey and Admin) and can't be assigned to a new role.</div>
+        </div>
+
+        <div class="panel-card">
+          <h3>Existing Roles</h3>
+          <table>
+            <thead><tr><th>Name</th><th>Level</th><th>Write</th><th>Move</th><th>Sub-cat</th><th>Kick</th><th>Delete</th></tr></thead>
+            <tbody id="roles-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-categories">
+        <div class="panel-card">
+          <h3>Add Sub-category</h3>
+          <div class="form-row">
+            <div class="field">
+              <label>Parent Category</label>
+              <select id="new-subcat-parent"></select>
+            </div>
+            <div class="field">
+              <label>Name</label>
+              <input type="text" id="new-subcat-name" />
+            </div>
+          </div>
+          <button class="btn small" id="create-subcat-btn">Add</button>
+          <div class="form-error" id="create-subcat-error"></div>
+        </div>
+        <div class="panel-card">
+          <h3>Categories</h3>
+          <table>
+            <thead><tr><th>Category</th><th>Sub-categories</th></tr></thead>
+            <tbody id="categories-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="chat-view">
+      <div id="chat-header">
+        <div>
+          <div class="title" id="chat-title">—</div>
+          <div class="meta" id="chat-meta">—</div>
+        </div>
+        <div class="actions">
+          <select id="chat-move-select" style="width:auto;"></select>
+          <button class="btn secondary small" id="chat-kick-btn">Kick</button>
+          <button class="btn danger small" id="chat-delete-btn">Delete</button>
+        </div>
+      </div>
+      <div id="chat-messages"></div>
+      <div id="chat-input-row">
+        <label class="reply-toggle" id="reply-toggle-wrap">
+          <input type="checkbox" id="reply-toggle" />
+          <span>Reply to client (!r)</span>
+        </label>
+        <input type="text" id="chat-input" placeholder="Type a message... prefix with !r to send to the client" />
+        <button class="btn small" id="chat-send-btn">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CLIENT MINIMAL APP ============ -->
+<div id="client-app">
+  <div id="client-header">
+    <div class="title">SUPPORT CHAT</div>
+    <button class="btn secondary small" id="client-logout-btn">Disconnect</button>
+  </div>
+  <div id="client-messages"></div>
+  <div id="client-input-row">
+    <input type="text" id="client-input" placeholder="Type a message..." />
+    <button class="btn small" id="client-send-btn">Send</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   CONFIG — paste your Supabase project URL + anon (public) key here.
+   Find them in Supabase Dashboard -> Project Settings -> API.
+   ========================================================================== */
+const SUPABASE_URL = "https://taawronqapxbhndqwfng.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_7JdOFQql8jafMJz_SnwOTQ_h_Wvb1RP";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ============================================================================
+   MATRIX RAIN BACKGROUND
+   ========================================================================== */
+(function matrixRain(){
+  const canvas = document.getElementById('matrix-canvas');
+  const ctx = canvas.getContext('2d');
+  let w,h,cols,drops;
+  const chars = "アイウエオカキクケコサシスセソ0123456789ABCDEF$#%&";
+  function resize(){
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+    cols = Math.floor(w/16);
+    drops = new Array(cols).fill(1);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  function draw(){
+    ctx.fillStyle = 'rgba(6,9,9,0.08)';
+    ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = '#00ff9c';
+    ctx.font = '14px monospace';
+    for(let i=0;i<drops.length;i++){
+      const text = chars[Math.floor(Math.random()*chars.length)];
+      ctx.fillText(text, i*16, drops[i]*16);
+      if(drops[i]*16 > h && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+  }
+  setInterval(draw, 45);
+})();
+
+/* ============================================================================
+   BOOT SEQUENCE
+   ========================================================================== */
+function runBootSequence(done){
+  const linesEl = document.getElementById('boot-lines');
+  const bar = document.getElementById('boot-progress-bar');
+  const lines = [
+    ["BOOTING SECURE TERMINAL...", false],
+    ["ESTABLISHING ENCRYPTED LINK...", false],
+    ["BYPASSING PERIMETER FIREWALL... [OK]", true],
+    ["DECRYPTING AUTH MODULE...", false],
+    ["LOADING USER DATABASE...", false],
+    ["VERIFYING NODE INTEGRITY... [OK]", true],
+    ["ACCESS POINT READY.", true],
+  ];
+  let i = 0;
+  function next(){
+    if(i >= lines.length){
+      setTimeout(()=>{
+        document.getElementById('boot-screen').classList.add('hidden');
+        setTimeout(done, 550);
+      }, 300);
+      return;
+    }
+    const [text, ok] = lines[i];
+    const div = document.createElement('div');
+    div.className = 'line' + (ok ? '' : ' dim');
+    div.textContent = text;
+    linesEl.appendChild(div);
+    bar.style.width = Math.round(((i+1)/lines.length)*100) + '%';
+    i++;
+    setTimeout(next, 260 + Math.random()*220);
+  }
+  next();
+}
+
+/* ============================================================================
+   HELPERS
+   ========================================================================== */
+function usernameToEmail(username){
+  const clean = String(username).trim().toLowerCase().replace(/[^a-z0-9_.-]/g,'');
+  return clean + "@chatapp.local";
+}
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str == null ? '' : String(str);
+  return d.innerHTML;
+}
+function el(html){
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+}
+function fmtTime(ts){
+  const d = new Date(ts);
+  return d.toLocaleString();
+}
+
+const CATEGORY_ORDER = ["Gang","PF","Orga","MC","SP","Autre"];
+
+/* ============================================================================
+   GLOBAL STATE
+   ========================================================================== */
+const state = {
+  session: null,
+  profile: null,
+  role: null,
+  roles: [],
+  categories: [],
+  subcategories: [],
+  threads: [],
+  accounts: [],
+  activeCategoryId: null,
+  activeThreadId: null,
+  clientThread: null,
+  msgChannel: null,
+};
+
+/* ============================================================================
+   AUTH
+   ========================================================================== */
+async function attemptLogin(){
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  errEl.textContent = '';
+  if(!username || !password){
+    errEl.textContent = 'ERROR: username and password required.';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Authenticating...';
+  const email = usernameToEmail(username);
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false;
+  btn.textContent = 'Connect';
+  if(error){
+    errEl.textContent = 'ACCESS DENIED: invalid credentials.';
+    return;
+  }
+  await onAuthed(data.session);
+}
+
+async function onAuthed(session){
+  state.session = session;
+  const { data: profile, error } = await sb
+    .from('profiles')
+    .select('*, roles(*)')
+    .eq('id', session.user.id)
+    .single();
+
+  if(error || !profile){
+    document.getElementById('login-error').textContent = 'ERROR: no profile found for this account.';
+    await sb.auth.signOut();
+    return;
+  }
+  if(!profile.is_active){
+    document.getElementById('login-error').textContent = 'ACCESS DENIED: this account has been disabled.';
+    await sb.auth.signOut();
+    return;
+  }
+
+  state.profile = profile;
+  state.role = profile.roles || null;
+
+  document.getElementById('login-screen').classList.remove('visible');
+
+  if(profile.account_type === 'staff'){
+    await loadStaffApp();
+  } else {
+    await loadClientApp();
+  }
+}
+
+async function logout(){
+  if(state.msgChannel){ sb.removeChannel(state.msgChannel); state.msgChannel = null; }
+  await sb.auth.signOut();
+  location.reload();
+}
+
+/* ============================================================================
+   STAFF APP
+   ========================================================================== */
+async function loadStaffApp(){
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('who-name').textContent = state.profile.display_name || state.profile.username;
+  document.getElementById('who-level').textContent =
+    (state.role ? state.role.name + ' — level ' + state.role.level : 'no role assigned');
+
+  await refreshAllStaffData();
+  renderSidebar();
+  renderSettingsRefs();
+}
+
+async function refreshAllStaffData(){
+  const [rolesRes, catsRes, subcatsRes, threadsRes, accountsRes] = await Promise.all([
+    sb.from('roles').select('*').order('level', { ascending:false }),
+    sb.from('categories').select('*'),
+    sb.from('subcategories').select('*'),
+    sb.from('threads').select('*'),
+    sb.from('profiles').select('*, roles(name,level)'),
+  ]);
+  state.roles = rolesRes.data || [];
+  state.categories = (catsRes.data || []).slice().sort(
+    (a,b)=> CATEGORY_ORDER.indexOf(a.name) - CATEGORY_ORDER.indexOf(b.name)
+  );
+  state.subcategories = subcatsRes.data || [];
+  state.threads = threadsRes.data || [];
+  state.accounts = accountsRes.data || [];
+}
+
+function myPerm(key){
+  if(!state.role) return false;
+  if(state.role.level >= 9) return true;
+  return !!state.role[key];
+}
+
+function renderSidebar(){
+  const nav = document.getElementById('sidebar-nav');
+  nav.innerHTML = '';
+
+  const settingsItem = el(`<div class="nav-item settings" data-nav="settings">⚙ Settings</div>`);
+  settingsItem.onclick = () => openSettings();
+  nav.appendChild(settingsItem);
+
+  state.categories.forEach(cat=>{
+    const wrap = document.createElement('div');
+    const head = el(`<div class="nav-item" data-cat="${cat.id}">${escapeHtml(cat.name)}</div>`);
+    head.onclick = () => toggleCategory(cat.id, wrap);
+    wrap.appendChild(head);
+    const children = document.createElement('div');
+    children.className = 'cat-children hidden-el';
+    children.dataset.children = cat.id;
+    wrap.appendChild(children);
+    nav.appendChild(wrap);
+  });
+}
+
+function toggleCategory(catId, wrap){
+  const children = wrap.querySelector('.cat-children');
+  const isOpen = !children.classList.contains('hidden-el');
+  document.querySelectorAll('.cat-children').forEach(c=>c.classList.add('hidden-el'));
+  document.querySelectorAll('.nav-item[data-cat]').forEach(n=>n.classList.remove('active'));
+  if(isOpen) return;
+  children.classList.remove('hidden-el');
+  wrap.querySelector('.nav-item').classList.add('active');
+  renderCategoryChildren(catId, children);
+}
+
+function renderCategoryChildren(catId, container){
+  container.innerHTML = '';
+  const subcats = state.subcategories.filter(s=>s.category_id === catId);
+  const threadsDirect = state.threads.filter(t=>t.category_id===catId && !t.subcategory_id);
+
+  threadsDirect.forEach(t=> container.appendChild(threadRow(t)));
+
+  subcats.forEach(sc=>{
+    container.appendChild(el(`<div class="subcat-label">${escapeHtml(sc.name)}</div>`));
+    const scThreads = state.threads.filter(t=>t.subcategory_id === sc.id);
+    if(scThreads.length === 0){
+      container.appendChild(el(`<div class="thread-item" style="opacity:.5;cursor:default;">(empty)</div>`));
+    }
+    scThreads.forEach(t=> container.appendChild(threadRow(t)));
+  });
+
+  if(subcats.length===0 && threadsDirect.length===0){
+    container.appendChild(el(`<div class="thread-item" style="opacity:.5;cursor:default;">(no chats yet)</div>`));
+  }
+}
+
+function threadRow(t){
+  const acc = state.accounts.find(a=>a.id === t.client_id);
+  const label = (acc ? acc.username : t.title) || 'chat';
+  const inactive = acc && !acc.is_active;
+  const row = el(`<div class="thread-item ${inactive?'inactive':''}" data-thread="${t.id}"><span class="dot"></span><span>${escapeHtml(label)}</span></div>`);
+  row.onclick = (e)=>{ e.stopPropagation(); openThread(t.id); };
+  return row;
+}
+
+function openSettings(){
+  state.activeThreadId = null;
+  document.getElementById('main-empty').style.display = 'none';
+  document.getElementById('chat-view').classList.remove('visible');
+  document.getElementById('settings-view').classList.add('visible');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelector('.nav-item.settings').classList.add('active');
+  renderSettingsAll();
+}
+
+function closeSettingsShowChat(){
+  document.getElementById('settings-view').classList.remove('visible');
+  document.getElementById('main-empty').style.display = 'none';
+  document.getElementById('chat-view').classList.add('visible');
+}
+
+/* -------- Settings: reference dropdowns -------- */
+function renderSettingsRefs(){
+  const roleSel = document.getElementById('new-acc-role');
+  roleSel.innerHTML = state.roles
+    .filter(r=>r.level < 9)
+    .map(r=>`<option value="${r.id}">${escapeHtml(r.name)} (lvl ${r.level})</option>`)
+    .join('');
+
+  const catSel = document.getElementById('new-acc-category');
+  catSel.innerHTML = state.categories.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  catSel.onchange = updateNewAccSubcats;
+  updateNewAccSubcats();
+
+  document.getElementById('new-subcat-parent').innerHTML =
+    state.categories.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+}
+
+function updateNewAccSubcats(){
+  const catId = document.getElementById('new-acc-category').value;
+  const subs = state.subcategories.filter(s=>s.category_id === catId);
+  document.getElementById('new-acc-subcategory').innerHTML =
+    '<option value="">—</option>' + subs.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+}
+
+function renderSettingsAll(){
+  renderSettingsRefs();
+  renderAccountsTable();
+  renderRolesTable();
+  renderCategoriesTable();
+
+  const canManage = state.role && state.role.level >= 9;
+  document.getElementById('create-account-card').style.display = canManage ? '' : 'none';
+  document.querySelectorAll('#tab-roles .panel-card').forEach(c=> c.style.display = canManage ? '' : 'none');
+}
+
+function renderAccountsTable(){
+  const tbody = document.getElementById('accounts-table-body');
+  tbody.innerHTML = '';
+  const canManage = state.role && state.role.level >= 9;
+  state.accounts
+    .slice()
+    .sort((a,b)=> (a.account_type<b.account_type?-1:1))
+    .forEach(acc=>{
+      let roleOrCat = '—';
+      if(acc.account_type === 'staff'){
+        roleOrCat = acc.roles ? `${acc.roles.name} (lvl ${acc.roles.level})` : '—';
+      } else {
+        const th = state.threads.find(t=>t.client_id===acc.id);
+        if(th){
+          const cat = state.categories.find(c=>c.id===th.category_id);
+          const sc = state.subcategories.find(s=>s.id===th.subcategory_id);
+          roleOrCat = (cat?cat.name:'—') + (sc? ' / '+sc.name : '');
+        }
+      }
+      const isFounder = acc.username === 'admin' || acc.username === 'ramsey';
+      const row = el(`<tr>
+        <td>${escapeHtml(acc.username)}</td>
+        <td>${acc.account_type}</td>
+        <td>${escapeHtml(roleOrCat)}</td>
+        <td><span class="pill ${acc.is_active?'on':''}">${acc.is_active?'active':'disabled'}</span></td>
+        <td class="row-actions"></td>
+      </tr>`);
+      const actionsTd = row.querySelector('.row-actions');
+      if(canManage && acc.id !== state.profile.id){
+        const kickBtn = el(`<button class="btn secondary small">${acc.is_active?'Kick':'Restore'}</button>`);
+        kickBtn.onclick = ()=> toggleActive(acc);
+        actionsTd.appendChild(kickBtn);
+        if(!isFounder){
+          const delBtn = el(`<button class="btn danger small">Delete</button>`);
+          delBtn.onclick = ()=> deleteAccount(acc);
+          actionsTd.appendChild(delBtn);
+        }
+      } else {
+        actionsTd.innerHTML = '<span style="color:var(--dim)">—</span>';
+      }
+      tbody.appendChild(row);
+    });
+}
+
+function renderRolesTable(){
+  const tbody = document.getElementById('roles-table-body');
+  tbody.innerHTML = '';
+  state.roles.forEach(r=>{
+    tbody.appendChild(el(`<tr>
+      <td>${escapeHtml(r.name)}</td>
+      <td>${r.level}</td>
+      <td><span class="pill ${r.can_write?'on':''}">${r.can_write?'yes':'no'}</span></td>
+      <td><span class="pill ${r.can_move_chats?'on':''}">${r.can_move_chats?'yes':'no'}</span></td>
+      <td><span class="pill ${r.can_make_subcategories?'on':''}">${r.can_make_subcategories?'yes':'no'}</span></td>
+      <td><span class="pill ${r.can_kick?'on':''}">${r.can_kick?'yes':'no'}</span></td>
+      <td><span class="pill ${r.can_delete?'on':''}">${r.can_delete?'yes':'no'}</span></td>
+    </tr>`));
+  });
+}
+
+function renderCategoriesTable(){
+  const tbody = document.getElementById('categories-table-body');
+  tbody.innerHTML = '';
+  state.categories.forEach(c=>{
+    const subs = state.subcategories.filter(s=>s.category_id===c.id).map(s=>s.name).join(', ') || '—';
+    tbody.appendChild(el(`<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(subs)}</td></tr>`));
+  });
+}
+
+/* -------- Settings: tabs -------- */
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
+  });
+});
+
+document.getElementById('new-acc-type').addEventListener('change', (e)=>{
+  const isStaff = e.target.value === 'staff';
+  document.getElementById('new-acc-staff-row').classList.toggle('hidden-el', !isStaff);
+  document.getElementById('new-acc-client-row').classList.toggle('hidden-el', isStaff);
+});
+
+document.getElementById('create-account-btn').addEventListener('click', async ()=>{
+  const errEl = document.getElementById('create-account-error');
+  const okEl = document.getElementById('create-account-success');
+  errEl.textContent = ''; okEl.textContent = '';
+  const type = document.getElementById('new-acc-type').value;
+  const username = document.getElementById('new-acc-username').value.trim();
+  const password = document.getElementById('new-acc-password').value;
+  const roleId = document.getElementById('new-acc-role').value;
+  const categoryId = document.getElementById('new-acc-category').value;
+  const subcategoryId = document.getElementById('new-acc-subcategory').value;
+
+  if(!username || !password){ errEl.textContent = 'Username and password required.'; return; }
+
+  const body = { username, password, type, displayName: username };
+  if(type === 'staff') body.roleId = roleId;
+  if(type === 'client'){ body.categoryId = categoryId; body.subcategoryId = subcategoryId || null; }
+
+  const res = await fetch('/api/create-account', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+state.session.access_token },
+    body: JSON.stringify(body)
+  });
+  const json = await res.json();
+  if(!res.ok){ errEl.textContent = 'ERROR: ' + json.error; return; }
+  okEl.textContent = 'Account "' + json.username + '" created.';
+  document.getElementById('new-acc-username').value = '';
+  document.getElementById('new-acc-password').value = '';
+  await refreshAllStaffData();
+  renderSidebar();
+  renderSettingsAll();
+});
+
+document.getElementById('create-role-btn').addEventListener('click', async ()=>{
+  const errEl = document.getElementById('create-role-error');
+  errEl.textContent = '';
+  const name = document.getElementById('new-role-name').value.trim();
+  let level = parseInt(document.getElementById('new-role-level').value, 10);
+  if(!name){ errEl.textContent = 'Name required.'; return; }
+  if(!(level>=1 && level<=8)){ errEl.textContent = 'Level must be between 1 and 8.'; return; }
+
+  const payload = {
+    name, level,
+    can_write: document.getElementById('perm-write').checked,
+    can_move_chats: document.getElementById('perm-move').checked,
+    can_make_subcategories: document.getElementById('perm-subcat').checked,
+    can_kick: document.getElementById('perm-kick').checked,
+    can_delete: document.getElementById('perm-delete').checked,
+  };
+  const { error } = await sb.from('roles').insert(payload);
+  if(error){ errEl.textContent = 'ERROR: ' + error.message; return; }
+  document.getElementById('new-role-name').value = '';
+  await refreshAllStaffData();
+  renderSettingsAll();
+});
+
+document.getElementById('create-subcat-btn').addEventListener('click', async ()=>{
+  const errEl = document.getElementById('create-subcat-error');
+  errEl.textContent = '';
+  const catId = document.getElementById('new-subcat-parent').value;
+  const name = document.getElementById('new-subcat-name').value.trim();
+  if(!name){ errEl.textContent = 'Name required.'; return; }
+  const { error } = await sb.from('subcategories').insert({ category_id: catId, name });
+  if(error){ errEl.textContent = 'ERROR: ' + error.message; return; }
+  document.getElementById('new-subcat-name').value = '';
+  await refreshAllStaffData();
+  renderSidebar();
+  renderSettingsAll();
+});
+
+async function toggleActive(acc){
+  const { error } = await sb.from('profiles').update({ is_active: !acc.is_active }).eq('id', acc.id);
+  if(error){ alert('ERROR: ' + error.message); return; }
+  await refreshAllStaffData();
+  renderSidebar();
+  renderSettingsAll();
+}
+
+async function deleteAccount(acc){
+  if(!confirm('Permanently delete "' + acc.username + '"? This cannot be undone.')) return;
+  const res = await fetch('/api/delete-account', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+state.session.access_token },
+    body: JSON.stringify({ targetId: acc.id })
+  });
+  const json = await res.json();
+  if(!res.ok){ alert('ERROR: ' + json.error); return; }
+  if(state.activeThreadId){
+    const th = state.threads.find(t=>t.id===state.activeThreadId);
+    if(th && th.client_id === acc.id){ state.activeThreadId = null; closeSettingsShowChat(); document.getElementById('chat-view').classList.remove('visible'); document.getElementById('main-empty').style.display='block'; }
+  }
+  await refreshAllStaffData();
+  renderSidebar();
+  renderSettingsAll();
+}
+
+/* -------- Chat (staff side) -------- */
+async function openThread(threadId){
+  state.activeThreadId = threadId;
+  document.getElementById('settings-view').classList.remove('visible');
+  document.getElementById('main-empty').style.display = 'none';
+  document.getElementById('chat-view').classList.add('visible');
+  document.querySelectorAll('.thread-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll(`.thread-item[data-thread="${threadId}"]`).forEach(n=>n.classList.add('active'));
+
+  const thread = state.threads.find(t=>t.id===threadId);
+  const acc = state.accounts.find(a=>a.id === thread.client_id);
+  document.getElementById('chat-title').textContent = acc ? acc.username : (thread.title || 'chat');
+  const cat = state.categories.find(c=>c.id===thread.category_id);
+  const sc = state.subcategories.find(s=>s.id===thread.subcategory_id);
+  document.getElementById('chat-meta').textContent =
+    (cat?cat.name:'') + (sc?' / '+sc.name:'') + (acc && !acc.is_active ? '  [DISABLED]' : '');
+
+  const canMove = myPerm('can_move_chats');
+  const moveSel = document.getElementById('chat-move-select');
+  moveSel.classList.toggle('hidden-el', !canMove);
+  if(canMove){
+    let opts = [];
+    state.categories.forEach(c=>{
+      opts.push(`<option value="cat:${c.id}" ${thread.category_id===c.id && !thread.subcategory_id?'selected':''}>${escapeHtml(c.name)}</option>`);
+      state.subcategories.filter(s=>s.category_id===c.id).forEach(s=>{
+        opts.push(`<option value="sub:${s.id}:${c.id}" ${thread.subcategory_id===s.id?'selected':''}>${escapeHtml(c.name)} / ${escapeHtml(s.name)}</option>`);
+      });
+    });
+    moveSel.innerHTML = opts.join('');
+    moveSel.onchange = async ()=>{
+      const [kind, id, parentCat] = moveSel.value.split(':');
+      const update = kind==='cat' ? { category_id:id, subcategory_id:null } : { category_id:parentCat, subcategory_id:id };
+      const { error } = await sb.from('threads').update(update).eq('id', threadId);
+      if(error){ alert('ERROR: '+error.message); return; }
+      await refreshAllStaffData();
+      renderSidebar();
+    };
+  }
+
+  const canKick = myPerm('can_kick');
+  const kickBtn = document.getElementById('chat-kick-btn');
+  kickBtn.classList.toggle('hidden-el', !canKick);
+  kickBtn.textContent = acc && acc.is_active ? 'Kick' : 'Restore';
+  kickBtn.onclick = ()=> acc && toggleActive(acc);
+
+  const canDelete = myPerm('can_delete');
+  const delBtn = document.getElementById('chat-delete-btn');
+  delBtn.classList.toggle('hidden-el', !canDelete);
+  delBtn.onclick = ()=> acc && deleteAccount(acc);
+
+  const canWrite = myPerm('can_write');
+  document.getElementById('chat-input').disabled = !canWrite;
+  document.getElementById('chat-send-btn').disabled = !canWrite;
+  document.getElementById('reply-toggle-wrap').classList.toggle('hidden-el', !canWrite);
+
+  await loadMessagesForThread(threadId, true);
+  subscribeToThread(threadId, true);
+}
+
+async function loadMessagesForThread(threadId, isStaffView){
+  const { data, error } = await sb.from('messages').select('*').eq('thread_id', threadId).order('created_at', { ascending:true });
+  if(error){ console.error(error); return; }
+  renderMessages(data || [], isStaffView);
+}
+
+function renderMessages(msgs, isStaffView){
+  const container = document.getElementById(isStaffView ? 'chat-messages' : 'client-messages');
+  container.innerHTML = '';
+  msgs.forEach(m=>{
+    let cls = 'msg';
+    if(isStaffView){
+      cls += m.visibility === 'internal' ? ' internal' : ' client-reply';
+      const isMine = m.sender_id === state.profile.id;
+    } else {
+      cls += (m.sender_id === state.profile.id) ? ' from-client' : ' client-reply';
+    }
+    const senderLabel = isStaffView
+      ? escapeHtml(m.sender_username) + (m.visibility==='internal' ? ' (internal note)' : ' (sent to client)')
+      : (m.sender_id === state.profile.id ? 'You' : 'Staff');
+    const div = el(`<div class="${cls}">
+      <div class="meta">${senderLabel} · ${fmtTime(m.created_at)}</div>
+      <div class="body"></div>
+      ${isStaffView ? '<span class="del">✕</span>' : ''}
+    </div>`);
+    div.querySelector('.body').textContent = m.content;
+    if(isStaffView){
+      const delSpan = div.querySelector('.del');
+      if(myPerm('can_delete')){
+        delSpan.onclick = async ()=>{
+          const { error } = await sb.from('messages').delete().eq('id', m.id);
+          if(error){ alert('ERROR: '+error.message); return; }
+        };
+      } else {
+        delSpan.style.display = 'none';
+      }
+    }
+    container.appendChild(div);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+
+function subscribeToThread(threadId, isStaffView){
+  if(state.msgChannel){ sb.removeChannel(state.msgChannel); state.msgChannel = null; }
+  state.msgChannel = sb.channel('messages-'+threadId)
+    .on('postgres_changes', { event:'*', schema:'public', table:'messages', filter:'thread_id=eq.'+threadId }, ()=>{
+      loadMessagesForThread(threadId, isStaffView);
+    })
+    .subscribe();
+}
+
+async function sendStaffMessage(){
+  const threadId = state.activeThreadId;
+  if(!threadId) return;
+  const input = document.getElementById('chat-input');
+  let text = input.value;
+  if(!text.trim()) return;
+  const toggle = document.getElementById('reply-toggle').checked;
+
+  let visibility = 'internal';
+  if(toggle && !/^!r\s/i.test(text)){ text = '!r ' + text; }
+  if(/^!r\s+/i.test(text)){
+    visibility = 'client';
+    text = text.replace(/^!r\s+/i, '');
+  }
+  if(!text.trim()) return;
+
+  const { error } = await sb.from('messages').insert({
+    thread_id: threadId,
+    sender_id: state.profile.id,
+    sender_username: state.profile.username,
+    content: text.trim(),
+    visibility
+  });
+  if(error){ alert('ERROR: ' + error.message); return; }
+  input.value = '';
+  await loadMessagesForThread(threadId, true);
+}
+
+document.getElementById('chat-send-btn').addEventListener('click', sendStaffMessage);
+document.getElementById('chat-input').addEventListener('keydown', (e)=>{ if(e.key==='Enter') sendStaffMessage(); });
+document.getElementById('reply-toggle').addEventListener('change', (e)=>{
+  document.getElementById('reply-toggle-wrap').classList.toggle('on', e.target.checked);
+});
+
+document.getElementById('logout-btn').addEventListener('click', logout);
+
+/* ============================================================================
+   CLIENT (chat-only) APP
+   ========================================================================== */
+async function loadClientApp(){
+  document.getElementById('client-app').classList.add('visible');
+  const { data: thread, error } = await sb.from('threads').select('*').eq('client_id', state.profile.id).single();
+  if(error || !thread){
+    document.getElementById('client-messages').innerHTML = '<div style="color:var(--dim);margin:auto;">No chat assigned yet. Contact staff.</div>';
+    return;
+  }
+  state.clientThread = thread;
+  await loadMessagesForThread(thread.id, false);
+  subscribeToThread(thread.id, false);
+}
+
+async function sendClientMessage(){
+  if(!state.clientThread) return;
+  const input = document.getElementById('client-input');
+  const text = input.value.trim();
+  if(!text) return;
+  const { error } = await sb.from('messages').insert({
+    thread_id: state.clientThread.id,
+    sender_id: state.profile.id,
+    sender_username: state.profile.username,
+    content: text,
+    visibility: 'client'
+  });
+  if(error){ alert('ERROR: ' + error.message); return; }
+  input.value = '';
+  await loadMessagesForThread(state.clientThread.id, false);
+}
+
+document.getElementById('client-send-btn').addEventListener('click', sendClientMessage);
+document.getElementById('client-input').addEventListener('keydown', (e)=>{ if(e.key==='Enter') sendClientMessage(); });
+document.getElementById('client-logout-btn').addEventListener('click', logout);
+
+/* ============================================================================
+   BOOTSTRAP
+   ========================================================================== */
+document.getElementById('login-btn').addEventListener('click', attemptLogin);
+document.getElementById('login-password').addEventListener('keydown', (e)=>{ if(e.key==='Enter') attemptLogin(); });
+
+window.addEventListener('load', async ()=>{
+  runBootSequence(async ()=>{
+    const { data } = await sb.auth.getSession();
+    if(data && data.session){
+      await onAuthed(data.session);
+    } else {
+      document.getElementById('login-screen').classList.add('visible');
+    }
+  });
+});
+</script>
+</body>
+</html>
