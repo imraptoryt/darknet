@@ -9,12 +9,41 @@
 // service role key.
 //
 // Required env vars (Vercel -> Settings -> Environment Variables):
-//   DISCORD_WEBHOOK_URL     the full https://discord.com/api/webhooks/... URL
+//   DISCORD_WEBHOOK_URL     default https://discord.com/api/webhooks/... URL
 //   DISCORD_PING_ROLE_ID    the Discord role ID to @mention, e.g. 1528450407783727115
 // Optional:
 //   DISCORD_NOTIFY_INTERNAL "false" to skip pinging for internal (non-!r) staff notes
+//
+// Each category can also have its own webhook_url (set in Settings -> Categories
+// in the app) — if present, that category's notifications go to that channel
+// instead of the default DISCORD_WEBHOOK_URL, so e.g. "Gang" and "MC" can each
+// post to their own Discord channel.
 
 const { createClient } = require('@supabase/supabase-js');
+
+// Nearest built-in Discord colored-square emoji for a hex color — purely
+// cosmetic, makes categories visually distinguishable at a glance even
+// when several land in the same channel.
+const SQUARES = [
+  { hex: '#e74c3c', emoji: '🟥' }, { hex: '#e67e22', emoji: '🟧' },
+  { hex: '#f1c40f', emoji: '🟨' }, { hex: '#2ecc71', emoji: '🟩' },
+  { hex: '#3498db', emoji: '🟦' }, { hex: '#9b59b6', emoji: '🟪' },
+  { hex: '#8d6748', emoji: '🟫' }, { hex: '#2c2f33', emoji: '⬛' },
+  { hex: '#f5f5f5', emoji: '⬜' },
+];
+function squareEmojiFor(hex){
+  if (!hex) return '⬜';
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+  let best = SQUARES[0], bestDist = Infinity;
+  for (const s of SQUARES) {
+    const sh = s.hex.replace('#', '');
+    const sr = parseInt(sh.substring(0, 2), 16), sg = parseInt(sh.substring(2, 4), 16), sb = parseInt(sh.substring(4, 6), 16);
+    const dist = (r - sr) ** 2 + (g - sg) ** 2 + (b - sb) ** 2;
+    if (dist < bestDist) { bestDist = dist; best = s; }
+  }
+  return best.emoji;
+}
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -23,13 +52,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+    const defaultWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
     const pingRoleId = process.env.DISCORD_PING_ROLE_ID;
-    if (!webhookUrl) {
-      // Not configured yet — silently no-op so message sending is never blocked by this.
-      res.status(200).json({ skipped: true, reason: 'DISCORD_WEBHOOK_URL not set' });
-      return;
-    }
 
     const authHeader = req.headers.authorization || '';
     const token = authHeader.replace(/^Bearer\s+/i, '');
@@ -87,29 +111,41 @@ module.exports = async (req, res) => {
     }
 
     const [{ data: category }, { data: subcategory }, { data: ownerProfile }] = await Promise.all([
-      admin.from('categories').select('name, color').eq('id', thread.category_id).single(),
+      admin.from('categories').select('name, color, webhook_url').eq('id', thread.category_id).single(),
       thread.subcategory_id
         ? admin.from('subcategories').select('name').eq('id', thread.subcategory_id).single()
         : Promise.resolve({ data: null }),
       admin.from('profiles').select('username, business').eq('id', thread.client_id).single(),
     ]);
 
+    const targetWebhookUrl = (category && category.webhook_url) || defaultWebhookUrl;
+    if (!targetWebhookUrl) {
+      // Not configured yet — silently no-op so message sending is never blocked by this.
+      res.status(200).json({ skipped: true, reason: 'No webhook configured (neither category.webhook_url nor DISCORD_WEBHOOK_URL is set)' });
+      return;
+    }
+
     const colorHex = (category && category.color) || '#00ff9c';
     const colorInt = parseInt(colorHex.replace('#', ''), 16) || 0x00ff9c;
+    const square = squareEmojiFor(colorHex);
+    const isInternal = visibility === 'internal';
 
-    const fields = [
-      { name: 'Expéditeur / Sender', value: senderProfile.username, inline: true },
-      { name: 'Business', value: senderProfile.business || ownerProfile?.business || '—', inline: true },
-      { name: 'Catégorie', value: (category ? category.name : '—') + (subcategory ? ' / ' + subcategory.name : ''), inline: true },
-      { name: 'Chat de', value: (ownerProfile ? ownerProfile.username : thread.title) || '—', inline: true },
-      { name: 'Visibilité', value: visibility === 'internal' ? 'Note interne (staff only)' : 'Visible client', inline: true },
-    ];
+    const categoryLine = (category ? category.name : '—') + (subcategory ? ' / ' + subcategory.name : '');
+    const businessLine = senderProfile.business || (ownerProfile && ownerProfile.business) || null;
+    const bodyText = (content && content.trim()) ? content.trim().slice(0, 1500) : (imageUrl ? '_[Image jointe]_' : '_(vide)_');
 
     const embed = {
-      title: '💬 Nouveau message',
-      description: (content && content.trim()) ? content.trim().slice(0, 1500) : (imageUrl ? '[Image jointe]' : ''),
+      author: { name: `${square}  ${categoryLine}` },
+      description: [
+        `**${senderProfile.username}**${businessLine ? '  ·  _' + businessLine + '_' : ''}`,
+        bodyText,
+      ].join('\n'),
       color: colorInt,
-      fields,
+      fields: [
+        { name: '💬 Chat de', value: (ownerProfile ? ownerProfile.username : thread.title) || '—', inline: true },
+        { name: isInternal ? '🔒 Visibilité' : '✅ Visibilité', value: isInternal ? 'Note interne' : 'Visible client', inline: true },
+      ],
+      footer: { text: '🕶️ Terminal Sécurisé' },
       timestamp: new Date().toISOString(),
     };
     if (imageUrl) {
@@ -122,7 +158,7 @@ module.exports = async (req, res) => {
       embeds: [embed],
     };
 
-    const discordRes = await fetch(webhookUrl, {
+    const discordRes = await fetch(targetWebhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

@@ -29,6 +29,7 @@ create table if not exists public.categories (
   id uuid primary key default gen_random_uuid(),
   name text unique not null,
   color text not null default '#00ff9c',
+  webhook_url text,
   created_at timestamptz not null default now()
 );
 
@@ -55,6 +56,7 @@ create table if not exists public.profiles (
   account_type text not null check (account_type in ('staff','client')),
   role_id uuid references public.roles(id),
   business text,
+  avatar_color text,
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );

@@ -62,7 +62,7 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const { username, password, roleId, categoryId, subcategoryId, displayName, business } = req.body || {};
+    const { username, password, roleId, categoryId, subcategoryId, displayName, business, avatarColor } = req.body || {};
 
     if (!username || !password) {
       res.status(400).json({ error: 'Username and password are required' });
@@ -124,6 +124,7 @@ module.exports = async (req, res) => {
       account_type: 'staff',
       role_id: finalRoleId,
       business: business || null,
+      avatar_color: avatarColor || null,
       is_active: true
     });
     if (insertProfileErr) {

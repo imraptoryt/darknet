@@ -1,10 +1,11 @@
 # Setup: Supabase + Vercel
 
 Files:
-- `index.html` — the whole app (boot screen, login, sidebar/settings, chat, EN/FR toggle, PNG attachments)
+- `index.html` — the whole app (boot screen, login, sidebar/settings, chat, EN/FR toggle, PNG attachments, avatars)
 - `schema.sql` — run once, for a **brand-new** Supabase project
 - `migration_v2.sql` — category-level permissions + default "Member" role (run if you already had `schema.sql` applied)
-- `migration_v3.sql` — categories.color, profiles.business, PNG attachments + storage bucket, Discord webhook support (run if you already had v1/v2 applied)
+- `migration_v3.sql` — categories.color, profiles.business, PNG attachments + storage bucket, Discord webhook support
+- `migration_v4.sql` — profiles.avatar_color, categories.webhook_url (per-category Discord routing)
 - `api/create-account.js`, `api/delete-account.js`, `api/discord-notify.js` — Vercel serverless functions (privileged actions, need the secret key)
 - `package.json` — dependency for the functions above
 
@@ -15,8 +16,9 @@ If you're picking this up mid-setup, skip to **Step 0**.
 Run, in order, whichever of these you haven't run yet (all safe to re-run, additive only, won't touch existing accounts or messages):
 1. `migration_v2.sql` — category-level permissions + default "Member" role.
 2. `migration_v3.sql` — category colors, business field, PNG attachment storage bucket.
+3. `migration_v4.sql` — avatar colors, per-category Discord webhook routing.
 
-Both go in Supabase → SQL Editor → New query, paste the whole file, Run.
+All three go in Supabase → SQL Editor → New query, paste the whole file, Run.
 
 ## 1. Create the Supabase project (new projects only)
 
@@ -112,11 +114,21 @@ Level 9/10 accounts can set a free-text "Business" on any account — either whe
 
 Settings → Categories now has a "Create Category" panel (level 9/10 only) — pick a name and a color. The color is used both for the sidebar and for the Discord embed color when a message comes in from that category. Sub-categories work as before, underneath whichever category you pick.
 
+## Chat look — avatars
+
+Every message now shows a small colored circle avatar instead of a plain text line:
+- In the full staff view, the circle is colored by the sender's own **avatar color** (set per-account in Settings → Accounts → the round swatch button, or defaults to their category's color) and shows the first letter of their **group** (the category their own personal chat belongs to — e.g. a Gang member shows a red "G").
+- In the restricted (scoped/solo) view, your own messages use your avatar color; everyone else's messages show a neutral circle colored like the category, since restricted accounts don't see real staff identities (by design).
+
+Consecutive messages from the same person within a few minutes are visually grouped (avatar only shown once), and a day separator ("Today" / "Yesterday" / date) appears when the day changes — same idea as most modern chat apps.
+
 ## Discord notifications
 
-Every new message (text or image) fires a webhook to your configured Discord channel: an embed color-matched to the category, pinging the role you set in `DISCORD_PING_ROLE_ID`, with fields for sender, business, category/sub-category, whose chat it is, and whether the message is client-visible or an internal note.
+Every new message (text or image) fires a webhook: an embed with a colored-square emoji + category name as the author line, the sender's name and business bolded in the description, fields for whose chat it is and whether the message is client-visible or an internal note, and a footer. It pings the role you set in `DISCORD_PING_ROLE_ID`.
 
-This runs from `api/discord-notify.js` after the message is successfully saved — it looks up the category/sender fresh from the database using the service role key, so nothing in the embed can be spoofed by tampering with the browser. If Discord is temporarily unreachable or the env vars aren't set yet, it fails silently (logged to the browser console) rather than blocking the chat.
+**Per-category channels**: each category can have its own Discord webhook (Settings → Categories → Edit → "Discord webhook for this category"). If set, that category's notifications go to that channel instead of the shared one — handy if you want Gang, MC, PF etc. each posting to their own channel. Leave it blank to keep using the shared `DISCORD_WEBHOOK_URL`.
+
+This runs from `api/discord-notify.js` after the message is successfully saved — it looks up the category/sender fresh from the database using the service role key, so nothing in the embed can be spoofed by tampering with the browser. If Discord is temporarily unreachable or no webhook is configured for that category, it fails silently (logged to the browser console) rather than blocking the chat.
 
 To test the webhook independently of the app, run this from any terminal with your real values swapped in:
 ```
