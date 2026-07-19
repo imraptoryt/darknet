@@ -1,17 +1,22 @@
 # Setup: Supabase + Vercel
 
 Files:
-- `index.html` — the whole app (boot screen, login, sidebar/settings, chat, EN/FR toggle)
+- `index.html` — the whole app (boot screen, login, sidebar/settings, chat, EN/FR toggle, PNG attachments)
 - `schema.sql` — run once, for a **brand-new** Supabase project
-- `migration_v2.sql` — run once instead, if you **already ran schema.sql before** on a project that has data in it
-- `api/create-account.js`, `api/delete-account.js` — Vercel serverless functions (privileged actions, need the secret key)
-- `package.json` — dependency for the two functions above
+- `migration_v2.sql` — category-level permissions + default "Member" role (run if you already had `schema.sql` applied)
+- `migration_v3.sql` — categories.color, profiles.business, PNG attachments + storage bucket, Discord webhook support (run if you already had v1/v2 applied)
+- `api/create-account.js`, `api/delete-account.js`, `api/discord-notify.js` — Vercel serverless functions (privileged actions, need the secret key)
+- `package.json` — dependency for the functions above
 
-If you're picking this up mid-setup (you already ran the original `schema.sql`), skip to **Step 0**.
+If you're picking this up mid-setup, skip to **Step 0**.
 
 ## Step 0 — you already have a project set up
 
-Run `migration_v2.sql` (all of it) in Supabase → SQL Editor → New query. It's additive — safe to run on top of what you already have, won't touch existing accounts or messages. It adds the category-permission system and the default "Member" role described below.
+Run, in order, whichever of these you haven't run yet (all safe to re-run, additive only, won't touch existing accounts or messages):
+1. `migration_v2.sql` — category-level permissions + default "Member" role.
+2. `migration_v3.sql` — category colors, business field, PNG attachment storage bucket.
+
+Both go in Supabase → SQL Editor → New query, paste the whole file, Run.
 
 ## 1. Create the Supabase project (new projects only)
 
@@ -41,12 +46,17 @@ const SUPABASE_ANON_KEY = "YOUR-PUBLISHABLE-OR-ANON-KEY";
 
 ## 3. Deploy to Vercel
 
-1. Folder with `index.html`, `package.json`, `api/create-account.js`, `api/delete-account.js`.
+1. Folder with `index.html`, `package.json`, `api/create-account.js`, `api/delete-account.js`, `api/discord-notify.js`.
 2. `vercel` CLI (`npm i -g vercel`, `vercel login`, `vercel`) or connect the repo through the dashboard.
-3. **Settings → Environment Variables** — add both, and make sure **all three environments are checked** (Production, Preview, Development), not just Production:
+3. **Settings → Environment Variables** — add these, and make sure **all three environments are checked** (Production, Preview, Development), not just Production:
    - `SUPABASE_URL`
    - `SUPABASE_SERVICE_ROLE_KEY` (the secret key)
+   - `DISCORD_WEBHOOK_URL` — your webhook: `https://discord.com/api/webhooks/1528450992184496138/bbUtVKnPVOmIV6aTK2ej9JBOfd3ji-V_rWF8oI8hvRykuflIc2cPhu0QiXL2xupeDV3N`
+   - `DISCORD_PING_ROLE_ID` — `1528450407783727115`
+   - `DISCORD_NOTIFY_INTERNAL` (optional) — set to `false` if you don't want a Discord ping for internal staff notes (messages sent without `!r`), only for messages actually visible to the chat owner. Defaults to `true` (pings on every message).
 4. **Redeploy after saving the env vars** — they only apply to deployments made after they're saved, not retroactively. `vercel --prod` or use "Redeploy" in the dashboard.
+
+Treat that webhook URL like a password — anyone who has it can post to your Discord channel. It only ever lives in the Vercel env var, never in `index.html` or in the repo.
 
 ### If "create account" fails / doesn't confirm
 
@@ -90,6 +100,32 @@ Your own chat never has this restriction — everything you post there is always
 
 EN/FR toggle, top-right corner, on the login screen and inside the app. Saved in the browser (`localStorage`) so it's remembered next visit.
 
+## PNG image attachments
+
+The 🖼 button next to the chat input opens a file picker restricted to `.png`, max 5MB. It uploads to a public Supabase Storage bucket called `chat-images` (created by `schema.sql` / `migration_v3.sql`) and posts the message with the image attached — the same `!r` / own-chat visibility rules apply to images as to text. Images are shown as clickable thumbnails in the chat.
+
+## Business field
+
+Level 9/10 accounts can set a free-text "Business" on any account — either when creating it, or afterwards via the "Edit" button next to it in Settings → Accounts. Shows up in the accounts table and gets included in the Discord notification embed.
+
+## Creating categories
+
+Settings → Categories now has a "Create Category" panel (level 9/10 only) — pick a name and a color. The color is used both for the sidebar and for the Discord embed color when a message comes in from that category. Sub-categories work as before, underneath whichever category you pick.
+
+## Discord notifications
+
+Every new message (text or image) fires a webhook to your configured Discord channel: an embed color-matched to the category, pinging the role you set in `DISCORD_PING_ROLE_ID`, with fields for sender, business, category/sub-category, whose chat it is, and whether the message is client-visible or an internal note.
+
+This runs from `api/discord-notify.js` after the message is successfully saved — it looks up the category/sender fresh from the database using the service role key, so nothing in the embed can be spoofed by tampering with the browser. If Discord is temporarily unreachable or the env vars aren't set yet, it fails silently (logged to the browser console) rather than blocking the chat.
+
+To test the webhook independently of the app, run this from any terminal with your real values swapped in:
+```
+curl -X POST "https://discord.com/api/webhooks/1528450992184496138/bbUtVKnPVOmIV6aTK2ej9JBOfd3ji-V_rWF8oI8hvRykuflIc2cPhu0QiXL2xupeDV3N" \
+  -H "Content-Type: application/json" \
+  -d '{"content":"<@&1528450407783727115>","allowed_mentions":{"parse":[],"roles":["1528450407783727115"]},"embeds":[{"title":"Test","description":"webhook check","color":15158332}]}'
+```
+A `204` response (empty body) means it worked — check the Discord channel. I wasn't able to run this myself from here (this sandbox's network doesn't allow reaching discord.com), so please run it once yourself to confirm before relying on it in the app.
+
 ## Notes / things worth knowing
 
 - Usernames map internally to `username@chatapp.local` for Supabase's email/password auth — nothing is actually emailed.
@@ -97,3 +133,5 @@ EN/FR toggle, top-right corner, on the login screen and inside the app. Saved in
 - `admin` and `ramsey` can never be deleted, only kicked/restored.
 - Realtime is enabled on `messages` — an open chat updates live for everyone viewing it.
 - Permissions are enforced in Postgres Row Level Security, not just hidden in the UI — even a technically-inclined user poking at the API directly can't see or do more than their role allows.
+- The `chat-images` storage bucket is public-read (needed so images load without extra signed-URL plumbing) but only logged-in users can upload to it, and only `.png` up to 5MB.
+- If Discord notifications feel too noisy, set `DISCORD_NOTIFY_INTERNAL=false` in Vercel to only ping for messages that are actually visible to the chat's owner.

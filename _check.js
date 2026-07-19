@@ -39,10 +39,20 @@ const TRANSLATIONS = {
     roleDefaultOption: "— Member (default) —",
     createBtn: "Create",
     allAccountsTitle: "All Accounts",
-    thUsername: "Username", thRole: "Role", thCategory: "Category", thStatus: "Status", thActions: "Actions",
+    thUsername: "Username", thRole: "Role", thCategory: "Category", thBusiness: "Business", thStatus: "Status", thActions: "Actions",
     active: "active", disabled: "disabled",
-    kick: "Kick", restore: "Restore", deleteBtn: "Delete", cancelBtn: "Cancel",
+    kick: "Kick", restore: "Restore", deleteBtn: "Delete", cancelBtn: "Cancel", editBtn2: "Edit",
     confirmDelete: 'Permanently delete "{u}"? This cannot be undone.',
+    fieldBusiness: "Business (optional)",
+    promptBusiness: "Business for {u}:",
+    createCategoryTitle: "Create Category",
+    fieldCategoryName: "Name",
+    fieldColor: "Color",
+    thColor: "Color",
+    imageBtn: "🖼",
+    imageOnlyPng: "Only .png images are supported.",
+    imageTooBig: "Image is too large (max 5MB).",
+    uploading: "Uploading...",
     createRoleTitle: "Create Role",
     editRoleTitle: "Edit Role",
     fieldName: "Name", fieldLevel: "Level (1-8)",
@@ -104,10 +114,20 @@ const TRANSLATIONS = {
     roleDefaultOption: "— Membre (par défaut) —",
     createBtn: "Créer",
     allAccountsTitle: "Tous les comptes",
-    thUsername: "Nom d'utilisateur", thRole: "Rôle", thCategory: "Catégorie", thStatus: "Statut", thActions: "Actions",
+    thUsername: "Nom d'utilisateur", thRole: "Rôle", thCategory: "Catégorie", thBusiness: "Business", thStatus: "Statut", thActions: "Actions",
     active: "actif", disabled: "désactivé",
-    kick: "Exclure", restore: "Restaurer", deleteBtn: "Supprimer", cancelBtn: "Annuler",
+    kick: "Exclure", restore: "Restaurer", deleteBtn: "Supprimer", cancelBtn: "Annuler", editBtn2: "Modifier",
     confirmDelete: 'Supprimer définitivement "{u}" ? Cette action est irréversible.',
+    fieldBusiness: "Business (optionnel)",
+    promptBusiness: "Business pour {u} :",
+    createCategoryTitle: "Créer une catégorie",
+    fieldCategoryName: "Nom",
+    fieldColor: "Couleur",
+    thColor: "Couleur",
+    imageBtn: "🖼",
+    imageOnlyPng: "Seules les images .png sont supportées.",
+    imageTooBig: "Image trop volumineuse (5 Mo max).",
+    uploading: "Envoi en cours...",
     createRoleTitle: "Créer un rôle",
     editRoleTitle: "Modifier le rôle",
     fieldName: "Nom", fieldLevel: "Niveau (1-8)",
@@ -591,10 +611,16 @@ function renderAccountsTable(){
         <td>${escapeHtml(acc.username)}</td>
         <td>${escapeHtml(roleLabel)}</td>
         <td>${escapeHtml(catLabel)}</td>
+        <td>${escapeHtml(acc.business || '—')}</td>
         <td><span class="pill ${acc.is_active?'on':''}">${acc.is_active?t('active'):t('disabled')}</span></td>
         <td class="row-actions"></td>
       </tr>`);
       const actionsTd = row.querySelector('.row-actions');
+      if(canManage){
+        const bizBtn = el(`<button class="btn secondary small">${escapeHtml(t('editBtn2'))}</button>`);
+        bizBtn.onclick = ()=> editBusiness(acc);
+        actionsTd.appendChild(bizBtn);
+      }
       if(canManage && acc.id !== state.profile.id){
         const kickBtn = el(`<button class="btn secondary small">${acc.is_active?escapeHtml(t('kick')):escapeHtml(t('restore'))}</button>`);
         kickBtn.onclick = ()=> toggleActive(acc);
@@ -604,7 +630,8 @@ function renderAccountsTable(){
           delBtn.onclick = ()=> deleteAccount(acc);
           actionsTd.appendChild(delBtn);
         }
-      } else {
+      }
+      if(actionsTd.children.length === 0){
         actionsTd.innerHTML = '<span style="color:var(--dim)">—</span>';
       }
       tbody.appendChild(row);
@@ -681,7 +708,8 @@ function renderCategoriesTable(){
   tbody.innerHTML = '';
   state.categories.forEach(c=>{
     const subs = state.subcategories.filter(s=>s.category_id===c.id).map(s=>s.name).join(', ') || '—';
-    tbody.appendChild(el(`<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(subs)}</td></tr>`));
+    const swatch = `<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${escapeHtml(c.color||'#00ff9c')};border:1px solid var(--border);"></span>`;
+    tbody.appendChild(el(`<tr><td>${swatch}</td><td>${escapeHtml(c.name)}</td><td>${escapeHtml(subs)}</td></tr>`));
   });
 }
 
@@ -704,12 +732,14 @@ document.getElementById('create-account-btn').addEventListener('click', async ()
   const roleId = document.getElementById('new-acc-role').value;
   const categoryId = document.getElementById('new-acc-category').value;
   const subcategoryId = document.getElementById('new-acc-subcategory').value;
+  const business = document.getElementById('new-acc-business').value.trim();
 
   if(!username || !password){ errEl.textContent = 'Username and password required.'; return; }
   if(!categoryId){ errEl.textContent = 'Category required.'; return; }
 
   const body = { username, password, categoryId, subcategoryId: subcategoryId || null, displayName: username };
   if(roleId) body.roleId = roleId;
+  if(business) body.business = business;
 
   let res, json;
   try{
@@ -731,6 +761,7 @@ document.getElementById('create-account-btn').addEventListener('click', async ()
   okEl.textContent = 'Account "' + json.username + '" created.';
   document.getElementById('new-acc-username').value = '';
   document.getElementById('new-acc-password').value = '';
+  document.getElementById('new-acc-business').value = '';
   await refreshAllData();
   renderSidebar();
   renderSettingsAll();
@@ -775,6 +806,20 @@ document.getElementById('create-role-btn').addEventListener('click', async ()=>{
   renderSettingsAll();
 });
 
+document.getElementById('create-cat-btn').addEventListener('click', async ()=>{
+  const errEl = document.getElementById('create-cat-error');
+  errEl.textContent = '';
+  const name = document.getElementById('new-cat-name').value.trim();
+  const color = document.getElementById('new-cat-color').value;
+  if(!name){ errEl.textContent = 'Name required.'; return; }
+  const { error } = await sb.from('categories').insert({ name, color });
+  if(error){ errEl.textContent = 'ERROR: ' + error.message; return; }
+  document.getElementById('new-cat-name').value = '';
+  await refreshAllData();
+  renderSidebar();
+  renderSettingsAll();
+});
+
 document.getElementById('create-subcat-btn').addEventListener('click', async ()=>{
   const errEl = document.getElementById('create-subcat-error');
   errEl.textContent = '';
@@ -788,6 +833,15 @@ document.getElementById('create-subcat-btn').addEventListener('click', async ()=
   renderSidebar();
   renderSettingsAll();
 });
+
+async function editBusiness(acc){
+  const val = prompt(t('promptBusiness').replace('{u}', acc.username), acc.business || '');
+  if(val === null) return;
+  const { error } = await sb.from('profiles').update({ business: val.trim() || null }).eq('id', acc.id);
+  if(error){ alert('ERROR: ' + error.message); return; }
+  await refreshAllData();
+  renderSettingsAll();
+}
 
 async function toggleActive(acc){
   const { error } = await sb.from('profiles').update({ is_active: !acc.is_active }).eq('id', acc.id);
@@ -928,6 +982,11 @@ function renderMessages(msgs, threadId){
       ${fullView ? '<span class="del">✕</span>' : ''}
     </div>`);
     div.querySelector('.body').textContent = m.content;
+    if(m.image_url){
+      const img = el(`<img class="attach" src="${escapeHtml(m.image_url)}" />`);
+      img.onclick = ()=> window.open(m.image_url, '_blank');
+      div.appendChild(img);
+    }
     if(fullView){
       const delSpan = div.querySelector('.del');
       if(myPerm('can_delete')){
@@ -953,43 +1012,106 @@ function subscribeToThread(threadId){
     .subscribe();
 }
 
+function resolveVisibility(threadId, text){
+  const own = isOwnThread(threadId);
+  let visibility = 'client';
+  let cleanText = text;
+  if(!own){
+    // replying inside someone else's chat: level>=6 required, !r governs visibility
+    const toggle = document.getElementById('reply-toggle').checked;
+    visibility = 'internal';
+    if(toggle && !/^!r\s/i.test(cleanText)){ cleanText = '!r ' + cleanText; }
+    if(/^!r\s+/i.test(cleanText)){
+      visibility = 'client';
+      cleanText = cleanText.replace(/^!r\s+/i, '');
+    }
+  }
+  return { visibility, cleanText };
+}
+
+async function notifyDiscord(threadId, content, imageUrl, visibility){
+  try{
+    await fetch('/api/discord-notify', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+state.session.access_token },
+      body: JSON.stringify({ threadId, content, imageUrl, visibility })
+    });
+  } catch(e){
+    console.warn('discord-notify failed', e);
+  }
+}
+
 async function sendMessage(){
   const threadId = state.activeThreadId;
   if(!threadId) return;
   const input = document.getElementById('chat-input');
   let text = input.value;
   if(!text.trim()) return;
-  const own = isOwnThread(threadId);
 
-  let visibility = 'client';
-  if(!own){
-    // replying inside someone else's chat: level>=6 required, !r governs visibility
-    const toggle = document.getElementById('reply-toggle').checked;
-    visibility = 'internal';
-    if(toggle && !/^!r\s/i.test(text)){ text = '!r ' + text; }
-    if(/^!r\s+/i.test(text)){
-      visibility = 'client';
-      text = text.replace(/^!r\s+/i, '');
-    }
-  }
-  if(!text.trim()) return;
+  const { visibility, cleanText } = resolveVisibility(threadId, text);
+  if(!cleanText.trim()) return;
 
   const { error } = await sb.from('messages').insert({
     thread_id: threadId,
     sender_id: state.profile.id,
     sender_username: state.profile.username,
-    content: text.trim(),
+    content: cleanText.trim(),
     visibility
   });
   if(error){ alert('ERROR: ' + error.message); return; }
   input.value = '';
   await loadMessagesForThread(threadId);
+  notifyDiscord(threadId, cleanText.trim(), null, visibility);
+}
+
+async function sendImage(file){
+  const threadId = state.activeThreadId;
+  if(!threadId || !file) return;
+  if(file.type !== 'image/png'){ alert(t('imageOnlyPng')); return; }
+  if(file.size > 5*1024*1024){ alert(t('imageTooBig')); return; }
+
+  const imageBtn = document.getElementById('chat-image-btn');
+  const prevLabel = imageBtn.textContent;
+  imageBtn.textContent = '...';
+  imageBtn.disabled = true;
+
+  try{
+    const path = `${threadId}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.png`;
+    const { error: upErr } = await sb.storage.from('chat-images').upload(path, file, { contentType:'image/png', upsert:false });
+    if(upErr){ alert('ERROR: ' + upErr.message); return; }
+    const { data: pub } = sb.storage.from('chat-images').getPublicUrl(path);
+    const imageUrl = pub.publicUrl;
+
+    const { visibility, cleanText } = resolveVisibility(threadId, document.getElementById('chat-input').value || '');
+
+    const { error } = await sb.from('messages').insert({
+      thread_id: threadId,
+      sender_id: state.profile.id,
+      sender_username: state.profile.username,
+      content: cleanText.trim(),
+      image_url: imageUrl,
+      visibility
+    });
+    if(error){ alert('ERROR: ' + error.message); return; }
+    document.getElementById('chat-input').value = '';
+    await loadMessagesForThread(threadId);
+    notifyDiscord(threadId, cleanText.trim(), imageUrl, visibility);
+  } finally {
+    imageBtn.textContent = prevLabel;
+    imageBtn.disabled = false;
+    document.getElementById('chat-image-input').value = '';
+  }
 }
 
 document.getElementById('chat-send-btn').addEventListener('click', sendMessage);
 document.getElementById('chat-input').addEventListener('keydown', (e)=>{ if(e.key==='Enter') sendMessage(); });
 document.getElementById('reply-toggle').addEventListener('change', (e)=>{
   document.getElementById('reply-toggle-wrap').classList.toggle('on', e.target.checked);
+});
+document.getElementById('chat-image-btn').addEventListener('click', ()=> document.getElementById('chat-image-input').click());
+document.getElementById('chat-image-input').addEventListener('change', (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if(file) sendImage(file);
 });
 document.getElementById('logout-btn').addEventListener('click', logout);
 

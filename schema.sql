@@ -28,6 +28,7 @@ create unique index if not exists roles_reserved_level_idx
 create table if not exists public.categories (
   id uuid primary key default gen_random_uuid(),
   name text unique not null,
+  color text not null default '#00ff9c',
   created_at timestamptz not null default now()
 );
 
@@ -53,6 +54,7 @@ create table if not exists public.profiles (
   display_name text,
   account_type text not null check (account_type in ('staff','client')),
   role_id uuid references public.roles(id),
+  business text,
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -79,6 +81,7 @@ create table if not exists public.messages (
   -- 'client'   = visible to the client (staff sent it with "!r " prefix, or the client sent it themself)
   -- 'internal' = staff-only note, never shown to the client
   visibility text not null check (visibility in ('client','internal')),
+  image_url text,
   created_at timestamptz not null default now()
 );
 
@@ -278,11 +281,25 @@ create policy messages_delete on public.messages for delete
 alter publication supabase_realtime add table public.messages;
 
 -- ----------------------------------------------------------------------------
--- SEED DATA — fixed categories + the two founding roles
+-- STORAGE — public bucket for PNG chat attachments
+-- ----------------------------------------------------------------------------
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('chat-images', 'chat-images', true, 5242880, array['image/png'])
+on conflict (id) do nothing;
+
+create policy chat_images_public_read on storage.objects for select
+  using (bucket_id = 'chat-images');
+create policy chat_images_authenticated_upload on storage.objects for insert
+  with check (bucket_id = 'chat-images' and auth.role() = 'authenticated');
+
+-- ----------------------------------------------------------------------------
+-- SEED DATA — fixed categories (with distinct Discord-embed colors) + the
+-- two founding roles
 -- ----------------------------------------------------------------------------
 
-insert into public.categories (name) values
-  ('Gang'), ('PF'), ('Orga'), ('MC'), ('SP'), ('Autre')
+insert into public.categories (name, color) values
+  ('Gang', '#e74c3c'), ('PF', '#3498db'), ('Orga', '#9b59b6'),
+  ('MC', '#e67e22'), ('SP', '#2ecc71'), ('Autre', '#95a5a6')
 on conflict (name) do nothing;
 
 insert into public.roles (name, level, can_move_chats, can_make_subcategories, can_write, can_kick, can_delete)
