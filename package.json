@@ -1,0 +1,9 @@
+{
+  "name": "gang-chat-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static hacking-terminal login + role-based chat app backed by Supabase, deployed on Vercel.",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4"
+  }
+}
