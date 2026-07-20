@@ -2,6 +2,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const PROTECTED_USERNAMES = ['admin', 'ramsey'];
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
@@ -29,8 +30,11 @@ module.exports = async (req, res) => {
 
   const { data: target, error: targetErr } = await admin.from('profiles').select('username').eq('id', targetId).single();
   if (targetErr || !target) { res.status(404).json({ error: 'Target account not found' }); return; }
-  if (target.username === 'admin' || target.username === 'ramsey') {
-    res.status(403).json({ error: 'Cannot delete a founding admin account' });
+
+  // Founding accounts (admin / ramsey) can never be deleted, by anyone, ever.
+  // Also enforced at the database level (migration_v6.sql trigger) as a backstop.
+  if (PROTECTED_USERNAMES.includes(target.username)) {
+    res.status(403).json({ error: 'This account is protected and cannot be deleted.' });
     return;
   }
 

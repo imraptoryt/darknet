@@ -32,6 +32,10 @@ module.exports = async (req, res) => {
 
   const cleanUsername = String(username).trim().toLowerCase().replace(/[^a-z0-9_.-]/g, '');
   if (!cleanUsername) { res.status(400).json({ error: 'Invalid username' }); return; }
+  if (cleanUsername === 'admin' || cleanUsername === 'ramsey') {
+    res.status(403).json({ error: 'That username is reserved.' });
+    return;
+  }
   const email = cleanUsername + '@chatapp.local';
 
   const { data: existing } = await admin.from('profiles').select('id').ilike('username', cleanUsername).maybeSingle();

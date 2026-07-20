@@ -2,6 +2,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const PROTECTED_USERNAMES = ['admin', 'ramsey'];
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
@@ -29,9 +30,17 @@ module.exports = async (req, res) => {
   const { data: target, error: targetErr } = await admin.from('profiles').select('*').eq('id', targetId).single();
   if (targetErr || !target) { res.status(404).json({ error: 'Target account not found' }); return; }
 
+  // Founding accounts (admin / ramsey) can never be modified through this endpoint —
+  // no username/password/role/category/business/avatar change, by anyone, ever.
+  // This is also enforced at the database level (migration_v6.sql triggers) as a backstop.
+  if (PROTECTED_USERNAMES.includes(target.username)) {
+    res.status(403).json({ error: 'This account is protected and cannot be modified.' });
+    return;
+  }
+
   if (roleId) {
     const { data: chosenRole } = await admin.from('roles').select('level').eq('id', roleId).maybeSingle();
-    if (chosenRole && chosenRole.level >= 9 && target.username !== 'admin' && target.username !== 'ramsey') {
+    if (chosenRole && chosenRole.level >= 9) {
       res.status(403).json({ error: 'Cannot assign level 9/10 roles to this account' });
       return;
     }
@@ -41,6 +50,10 @@ module.exports = async (req, res) => {
   if (username && username.trim()) {
     const cleanUsername = String(username).trim().toLowerCase().replace(/[^a-z0-9_.-]/g, '');
     if (!cleanUsername) { res.status(400).json({ error: 'Invalid username' }); return; }
+    if (PROTECTED_USERNAMES.includes(cleanUsername)) {
+      res.status(403).json({ error: 'That username is reserved.' });
+      return;
+    }
     if (cleanUsername !== target.username) {
       const { data: existing } = await admin.from('profiles').select('id').ilike('username', cleanUsername).neq('id', targetId).maybeSingle();
       if (existing) { res.status(409).json({ error: 'Username already taken' }); return; }
