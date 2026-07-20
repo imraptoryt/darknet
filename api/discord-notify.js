@@ -2,28 +2,22 @@
 // Body: { threadId, content, imageUrl?, visibility }
 // Header: Authorization: Bearer <caller's supabase access token>
 //
-// Fires a Discord webhook notification for a newly-sent message. Runs
-// server-side so the Discord webhook URL and role ID never reach the browser,
-// and so the category/sender info in the embed can't be spoofed by the
-// client — everything is looked up fresh from the database using the
-// service role key.
+// Fires a Discord webhook notification, but ONLY when the message was
+// written by the thread's own owner (a "user" writing in their personal
+// chat) — staff replies (including !r replies) never ping Discord, since
+// staff already see those in the app. Runs server-side so the webhook URL,
+// role ID, and category/sender info can't be spoofed by the client.
 //
 // Required env vars (Vercel -> Settings -> Environment Variables):
 //   DISCORD_WEBHOOK_URL     default https://discord.com/api/webhooks/... URL
 //   DISCORD_PING_ROLE_ID    the Discord role ID to @mention, e.g. 1528450407783727115
-// Optional:
-//   DISCORD_NOTIFY_INTERNAL "false" to skip pinging for internal (non-!r) staff notes
 //
 // Each category can also have its own webhook_url (set in Settings -> Categories
 // in the app) — if present, that category's notifications go to that channel
-// instead of the default DISCORD_WEBHOOK_URL, so e.g. "Gang" and "MC" can each
-// post to their own Discord channel.
+// instead of the default DISCORD_WEBHOOK_URL.
 
 const { createClient } = require('@supabase/supabase-js');
 
-// Nearest built-in Discord colored-square emoji for a hex color — purely
-// cosmetic, makes categories visually distinguishable at a glance even
-// when several land in the same channel.
 const SQUARES = [
   { hex: '#e74c3c', emoji: '🟥' }, { hex: '#e67e22', emoji: '🟧' },
   { hex: '#f1c40f', emoji: '🟨' }, { hex: '#2ecc71', emoji: '🟩' },
@@ -43,6 +37,11 @@ function squareEmojiFor(hex){
     if (dist < bestDist) { bestDist = dist; best = s; }
   }
   return best.emoji;
+}
+function prettyName(str){
+  if (!str) return '';
+  return String(str).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
+    .split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : w).join(' ');
 }
 
 module.exports = async (req, res) => {
@@ -94,12 +93,6 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const notifyInternal = (process.env.DISCORD_NOTIFY_INTERNAL || 'true').toLowerCase() !== 'false';
-    if (visibility === 'internal' && !notifyInternal) {
-      res.status(200).json({ skipped: true, reason: 'internal notifications disabled' });
-      return;
-    }
-
     const { data: thread } = await admin
       .from('threads')
       .select('category_id, subcategory_id, title, client_id')
@@ -110,17 +103,22 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const [{ data: category }, { data: subcategory }, { data: ownerProfile }] = await Promise.all([
+    // Only the thread's own owner writing in their own chat triggers a ping —
+    // staff replies (with or without !r) never notify Discord.
+    if (thread.client_id !== callerId) {
+      res.status(200).json({ skipped: true, reason: 'staff reply — not notified' });
+      return;
+    }
+
+    const [{ data: category }, { data: subcategory }] = await Promise.all([
       admin.from('categories').select('name, color, webhook_url').eq('id', thread.category_id).single(),
       thread.subcategory_id
         ? admin.from('subcategories').select('name').eq('id', thread.subcategory_id).single()
         : Promise.resolve({ data: null }),
-      admin.from('profiles').select('username, business').eq('id', thread.client_id).single(),
     ]);
 
     const targetWebhookUrl = (category && category.webhook_url) || defaultWebhookUrl;
     if (!targetWebhookUrl) {
-      // Not configured yet — silently no-op so message sending is never blocked by this.
       res.status(200).json({ skipped: true, reason: 'No webhook configured (neither category.webhook_url nor DISCORD_WEBHOOK_URL is set)' });
       return;
     }
@@ -128,22 +126,20 @@ module.exports = async (req, res) => {
     const colorHex = (category && category.color) || '#00ff9c';
     const colorInt = parseInt(colorHex.replace('#', ''), 16) || 0x00ff9c;
     const square = squareEmojiFor(colorHex);
-    const isInternal = visibility === 'internal';
 
     const categoryLine = (category ? category.name : '—') + (subcategory ? ' / ' + subcategory.name : '');
-    const businessLine = senderProfile.business || (ownerProfile && ownerProfile.business) || null;
+    const prettySender = prettyName(senderProfile.username);
     const bodyText = (content && content.trim()) ? content.trim().slice(0, 1500) : (imageUrl ? '_[Image jointe]_' : '_(vide)_');
 
     const embed = {
       author: { name: `${square}  ${categoryLine}` },
       description: [
-        `**${senderProfile.username}**${businessLine ? '  ·  _' + businessLine + '_' : ''}`,
+        `**${prettySender}**${senderProfile.business ? '  ·  _' + senderProfile.business + '_' : ''}`,
         bodyText,
       ].join('\n'),
       color: colorInt,
       fields: [
-        { name: '💬 Chat de', value: (ownerProfile ? ownerProfile.username : thread.title) || '—', inline: true },
-        { name: isInternal ? '🔒 Visibilité' : '✅ Visibilité', value: isInternal ? 'Note interne' : 'Visible client', inline: true },
+        { name: '💬 Chat', value: prettySender, inline: true },
       ],
       footer: { text: '🕶️ Terminal Sécurisé' },
       timestamp: new Date().toISOString(),
@@ -172,7 +168,6 @@ module.exports = async (req, res) => {
 
     res.status(200).json({ success: true });
   } catch (e) {
-    // Never let a Discord hiccup break message sending — respond 200 with the error noted.
     res.status(200).json({ success: false, error: (e && e.message) || 'Server error' });
   }
 };

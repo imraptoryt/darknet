@@ -25,11 +25,6 @@ module.exports = async (req, res) => {
 
     const url = process.env.SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !serviceKey) {
-      res.status(500).json({ error: 'Server not configured (missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY env vars)' });
-      return;
-    }
-
     const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
     const { data: userData, error: userErr } = await admin.auth.getUser(token);
@@ -41,11 +36,10 @@ module.exports = async (req, res) => {
 
     const { data: callerProfile } = await admin
       .from('profiles')
-      .select('id, account_type, is_active, roles(level, can_delete)')
+      .select('id, is_active, roles(level, can_delete)')
       .eq('id', callerId)
       .single();
-
-    if (!callerProfile || callerProfile.account_type !== 'staff' || !callerProfile.is_active) {
+    if (!callerProfile || !callerProfile.is_active) {
       res.status(403).json({ error: 'Not authorized' });
       return;
     }

@@ -1,5 +1,5 @@
 // POST /api/create-account
-// Body: { username, password, categoryId, subcategoryId?, roleId?, displayName? }
+// Body: { username, password, categoryId, subcategoryId?, roleId?, displayName?, business?, avatarColor? }
 // Header: Authorization: Bearer <caller's supabase access token>
 //
 // Every account now gets its own personal chat thread (in `categoryId`), and
@@ -84,7 +84,6 @@ module.exports = async (req, res) => {
     }
     const email = `${cleanUsername}@chatapp.local`;
 
-    // Resolve the role: use the one provided, or fall back to the default "Member" role.
     let finalRoleId = roleId || null;
     if (!finalRoleId) {
       const { data: memberRole, error: memberRoleErr } = await admin.from('roles').select('id').eq('name', 'Member').single();
