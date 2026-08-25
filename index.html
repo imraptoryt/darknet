@@ -123,9 +123,9 @@
   #main-area{ flex:1; display:flex; overflow:hidden; position:relative; }
   #map-wrap{ flex:1; overflow:auto; position:relative; background:#08050380; cursor:grab; user-select:none; }
   #map-wrap.dragging{ cursor:grabbing; }
-  #map-container{ position:relative; margin:0 auto; }
-  #map-image{ display:block; max-width:none; user-select:none; -webkit-user-drag:none; }
-  #map-placeholder{ width:1200px; height:700px; background:
+  #map-container{ position:relative; width:100%; }
+  #map-image{ display:block; width:100%; height:auto; user-select:none; -webkit-user-drag:none; }
+  #map-placeholder{ width:100%; aspect-ratio:16/9; background:
       repeating-linear-gradient(45deg, rgba(255,106,26,0.04) 0 2px, transparent 2px 26px),
       repeating-linear-gradient(-45deg, rgba(255,106,26,0.04) 0 2px, transparent 2px 26px), #0a0503;
     display:flex; align-items:center; justify-content:center; }
@@ -894,6 +894,7 @@ function openAdminLoginModal(){
 }
 document.getElementById('hidden-admin-btn').addEventListener('click', openAdminLoginModal);
 document.getElementById('lockout-admin-btn').addEventListener('click', openAdminLoginModal);
+
 document.getElementById('admin-login-cancel').addEventListener('click', ()=>{
   document.getElementById('admin-login-modal').classList.remove('visible');
 });
