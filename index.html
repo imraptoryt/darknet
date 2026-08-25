@@ -48,13 +48,15 @@
   .btn{ font-family:'Share Tech Mono', monospace; letter-spacing:1px; text-transform:uppercase; cursor:pointer;
     background:var(--accent); color:#160900; border:none; padding:11px 20px; font-weight:bold; font-size:12.5px;
     clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
-    transition:filter .15s, transform .1s; }
-  .btn:hover{ filter:brightness(1.18); }
-  .btn:active{ transform:scale(0.97); }
-  .btn:disabled{ opacity:0.45; cursor:not-allowed; }
-  .btn.secondary{ background:transparent; color:var(--accent2); border:1px solid var(--accent-dim); }
-  .btn.secondary:hover{ border-color:var(--accent); }
+    box-shadow:0 2px 0 rgba(0,0,0,0.25), 0 0 0 rgba(255,106,26,0);
+    transition:filter .15s, transform .12s, box-shadow .15s; }
+  .btn:hover{ filter:brightness(1.18); transform:translateY(-1px); box-shadow:0 4px 14px rgba(255,106,26,0.35); }
+  .btn:active{ transform:scale(0.97) translateY(0); }
+  .btn:disabled{ opacity:0.45; cursor:not-allowed; transform:none !important; box-shadow:none !important; }
+  .btn.secondary{ background:transparent; color:var(--accent2); border:1px solid var(--accent-dim); box-shadow:none; }
+  .btn.secondary:hover{ border-color:var(--accent); box-shadow:0 4px 14px rgba(255,106,26,0.15); }
   .btn.danger{ background:var(--danger); color:#1a0000; }
+  .btn.danger:hover{ box-shadow:0 4px 14px rgba(255,59,59,0.4); }
   .btn.small{ padding:7px 12px; font-size:11px; }
   .btn.block{ width:100%; }
 
@@ -109,7 +111,8 @@
   /* ---------------- TABLET APP ---------------- */
   #tablet-app{ position:fixed; inset:0; z-index:5; display:none; flex-direction:column; }
   #tablet-app.visible{ display:flex; }
-  #topbar{ height:56px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 18px; border-bottom:1px solid var(--border); background:var(--panel); z-index:10; }
+  #topbar{ height:56px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 18px; border-bottom:1px solid var(--border); background:var(--panel); z-index:10;
+    box-shadow:0 1px 0 rgba(255,106,26,0.12), 0 6px 24px rgba(0,0,0,0.35); }
   #topbar .brand{ font-family:'Orbitron',sans-serif; font-weight:800; letter-spacing:2px; color:var(--accent); font-size:15px; }
   #topbar .brand span{ color:var(--accent2); font-weight:600; }
   #topbar .right{ display:flex; align-items:center; gap:16px; }
@@ -129,8 +132,8 @@
   #map-placeholder span{ color:var(--dim); font-size:13px; letter-spacing:2px; text-transform:uppercase; border:1px dashed var(--border); padding:16px 26px; }
   #pins-layer{ position:absolute; inset:0; cursor:default; }
   #pins-layer.place-mode{ cursor:crosshair; }
-  .mission-pin{ position:absolute; transform:translate(-50%,-50%); width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; cursor:pointer; background:radial-gradient(circle at 35% 30%, #2a1305, #0c0503); border:2px solid var(--accent); box-shadow:0 0 10px rgba(255,106,26,0.6); transition:transform .12s; }
-  .mission-pin:hover{ transform:translate(-50%,-50%) scale(1.18); }
+  .mission-pin{ position:absolute; transform:translate(-50%,-50%); width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; cursor:pointer; background:radial-gradient(circle at 35% 30%, #2a1305, #0c0503); border:2px solid var(--accent); box-shadow:0 0 10px rgba(255,106,26,0.6), 0 6px 10px rgba(0,0,0,0.5); transition:transform .15s cubic-bezier(.3,1.5,.5,1), box-shadow .15s; }
+  .mission-pin:hover{ transform:translate(-50%,-50%) scale(1.22) translateY(-2px); box-shadow:0 0 16px rgba(255,106,26,0.85), 0 10px 14px rgba(0,0,0,0.55); }
   .mission-pin.selected{ box-shadow:0 0 0 3px rgba(255,179,71,0.5), 0 0 16px rgba(255,106,26,0.9); }
   .mission-pin.status-in_progress{ border-color:var(--warn); box-shadow:0 0 10px rgba(255,210,59,0.6); animation:pulse 1.6s infinite; }
   .mission-pin.status-completed{ border-color:var(--ok); box-shadow:0 0 8px rgba(76,175,122,0.5); opacity:0.75; }
@@ -139,14 +142,17 @@
 
   #place-hint{ position:absolute; top:14px; left:50%; transform:translateX(-50%); background:var(--panel2); border:1px solid var(--accent); color:var(--accent2); font-size:11.5px; letter-spacing:1px; padding:9px 18px; text-transform:uppercase; z-index:15; }
 
-  #detail-panel{ width:340px; flex-shrink:0; border-left:1px solid var(--border); background:var(--panel); padding:22px 20px; overflow-y:auto; }
-  #detail-panel.hidden-el{ display:none; }
+  #detail-panel{ position:absolute; top:0; right:0; bottom:0; width:340px; max-width:88vw; z-index:12;
+    border-left:1px solid var(--border); background:linear-gradient(180deg,var(--panel),var(--panel2));
+    padding:22px 20px; overflow-y:auto; box-shadow:-16px 0 40px rgba(0,0,0,0.45), -1px 0 0 rgba(255,106,26,0.15);
+    transform:translateX(100%); opacity:0; transition:transform .22s ease, opacity .22s ease; pointer-events:none; }
+  #detail-panel.open{ transform:translateX(0); opacity:1; pointer-events:auto; }
   #detail-panel .close-btn{ float:right; background:transparent; border:none; color:var(--dim); font-size:16px; cursor:pointer; }
   #detail-panel .close-btn:hover{ color:var(--text); }
   #detail-panel h2{ font-size:17px; color:var(--accent2); margin-bottom:4px; padding-right:20px; }
   #detail-panel .giver{ font-size:11px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; margin-bottom:16px; }
   #detail-panel .giver b{ color:var(--accent); }
-  .badge{ display:inline-block; font-size:10px; padding:3px 9px; border-radius:10px; text-transform:uppercase; letter-spacing:1px; border:1px solid; margin-right:6px; margin-bottom:14px; }
+  .badge{ display:inline-flex; align-items:center; gap:4px; font-size:10px; padding:4px 10px; border-radius:10px; text-transform:uppercase; letter-spacing:1px; border:1px solid; margin-right:6px; margin-bottom:14px; background:rgba(255,255,255,0.02); }
   .badge.risk-low{ color:var(--ok); border-color:var(--ok); }
   .badge.risk-medium{ color:var(--accent2); border-color:var(--accent); }
   .badge.risk-high{ color:var(--danger); border-color:var(--danger); }
@@ -170,10 +176,13 @@
   #admin-badge{ position:fixed; bottom:10px; right:36px; z-index:30; display:flex; gap:6px; align-items:center; background:var(--panel2); border:1px solid var(--accent-dim); padding:6px 10px; font-size:10.5px; letter-spacing:1px; color:var(--accent2); }
 
   /* ---------------- MODALS ---------------- */
-  .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(2px); z-index:100; display:none; align-items:center; justify-content:center; padding:20px; }
-  .modal-overlay.visible{ display:flex; }
-  .modal-card{ width:min(460px,94vw); max-height:88vh; overflow-y:auto; background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--border); padding:26px; box-shadow:0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(255,106,26,0.08);
-    clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px); }
+  .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(3px); z-index:100; display:none; align-items:center; justify-content:center; padding:20px;
+    opacity:0; transition:opacity .16s ease; }
+  .modal-overlay.visible{ display:flex; opacity:1; }
+  .modal-card{ width:min(460px,94vw); max-height:88vh; overflow-y:auto; background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--border); padding:26px; box-shadow:0 24px 70px rgba(0,0,0,0.65), 0 0 50px rgba(255,106,26,0.1), inset 0 1px 0 rgba(255,255,255,0.03);
+    clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);
+    transform:scale(0.96) translateY(8px); transition:transform .18s cubic-bezier(.2,.9,.3,1.2); }
+  .modal-overlay.visible .modal-card{ transform:scale(1) translateY(0); }
   .modal-card.wide{ width:min(720px,94vw); }
   .modal-card h3{ font-size:15px; color:var(--accent); letter-spacing:1px; margin-bottom:18px; }
   .modal-actions{ display:flex; gap:8px; margin-top:8px; }
@@ -181,8 +190,9 @@
   .form-note{ font-size:11px; color:var(--dim); margin-top:8px; line-height:1.5; }
 
   .icon-pick{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
-  .icon-pick button{ width:36px; height:36px; font-size:16px; background:#0a0503; border:1px solid var(--border); cursor:pointer; border-radius:4px; }
-  .icon-pick button.active{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+  .icon-pick button{ width:36px; height:36px; font-size:16px; background:#0a0503; border:1px solid var(--border); cursor:pointer; border-radius:4px; transition:transform .12s, border-color .12s; }
+  .icon-pick button:hover{ transform:translateY(-2px); border-color:var(--accent-dim); }
+  .icon-pick button.active{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), 0 0 10px rgba(255,106,26,0.4); }
 
   /* admin panel */
   .admin-tabs{ display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:16px; }
@@ -190,7 +200,8 @@
   .admin-tab.active{ color:var(--accent2); border-color:var(--accent); }
   .admin-tab-panel{ display:none; }
   .admin-tab-panel.active{ display:block; }
-  .mission-list-item{ display:flex; align-items:center; gap:10px; padding:10px; border:1px solid var(--border); margin-bottom:8px; background:var(--bg2); }
+  .mission-list-item{ display:flex; align-items:center; gap:10px; padding:10px; border:1px solid var(--border); margin-bottom:8px; background:var(--bg2); transition:border-color .15s, transform .12s; }
+  .mission-list-item:hover{ border-color:var(--accent-dim); transform:translateX(2px); }
   .mission-list-item .ic{ font-size:16px; }
   .mission-list-item .info{ flex:1; min-width:0; }
   .mission-list-item .info .t{ font-size:12.5px; color:var(--text); }
@@ -255,7 +266,7 @@
         <div id="place-hint" class="hidden-el">CLICK THE MAP TO PLACE THE MISSION</div>
       </div>
     </div>
-    <div id="detail-panel" class="hidden-el"></div>
+    <div id="detail-panel"></div>
   </div>
 </div>
 
@@ -409,7 +420,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_Y8LbGUHwi7PSnXhhOCLE4Q_9iu3WgVk";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const ADMIN_EMAIL = "sovereign-ops@tablet.local";
 const DEFAULT_MAP_URL = "https://imgg.fr/r/NesguhGF.png";
-const ICONS = ["🎯","📦","🔫","💰","⚠️","🚨","🛠️","🗝️","🚗","☠️"];
+const ICONS = ["🎯","📦","🔫","💰","⚠️","🚨","🛠️","🗝️","🚗","☠️","💊","🏦","💣","🛥️","🧨"];
 
 /* ============================================================================
    STATE
@@ -444,6 +455,8 @@ function escapeHtml(str){
 }
 function riskLabel(r){ return { low:'Low', medium:'Medium', high:'High', extreme:'Extreme' }[r] || r; }
 function statusLabel(s){ return { open:'Open', in_progress:'In Progress', completed:'Completed', failed:'Failed' }[s] || s; }
+function riskIcon(r){ return { low:'●', medium:'▲', high:'⚡', extreme:'☠' }[r] || '●'; }
+function statusIcon(s){ return { open:'◇', in_progress:'◐', completed:'✔', failed:'✕' }[s] || '◇'; }
 
 /* ---- Custom modal dialogs (no native confirm()/alert()) ---- */
 let _confirmCallback = null;
@@ -699,21 +712,21 @@ function selectMission(id){
 function closeDetailPanel(){
   state.selectedMissionId = null;
   renderPins();
-  document.getElementById('detail-panel').classList.add('hidden-el');
+  document.getElementById('detail-panel').classList.remove('open');
 }
 
 function renderDetailPanel(){
   const m = state.missions.find(x=>x.id === state.selectedMissionId);
   const panel = document.getElementById('detail-panel');
-  if(!m){ panel.classList.add('hidden-el'); return; }
-  panel.classList.remove('hidden-el');
+  if(!m){ panel.classList.remove('open'); return; }
+  panel.classList.add('open');
   panel.innerHTML = `
     <button class="close-btn" id="detail-close-btn">✕</button>
     <h2>${m.icon || '🎯'} ${escapeHtml(m.title)}</h2>
     <div class="giver">Issued by <b>${escapeHtml(m.giver || 'Sovereign')}</b></div>
     <div>
-      <span class="badge risk-${m.risk}">${riskLabel(m.risk)} risk</span>
-      <span class="badge status-${m.status}">${statusLabel(m.status)}</span>
+      <span class="badge risk-${m.risk}">${riskIcon(m.risk)} ${riskLabel(m.risk)} risk</span>
+      <span class="badge status-${m.status}">${statusIcon(m.status)} ${statusLabel(m.status)}</span>
     </div>
     <div class="desc-label">Briefing</div>
     <div class="desc">${escapeHtml(m.description) || '—'}</div>
@@ -959,7 +972,7 @@ function renderAdminMissionList(){
       <div class="ic">${m.icon || '🎯'}</div>
       <div class="info">
         <div class="t">${escapeHtml(m.title)}</div>
-        <div class="m">${escapeHtml(m.giver || 'Sovereign')} · ${riskLabel(m.risk)} · <span class="badge status-${m.status}" style="margin:0;">${statusLabel(m.status)}</span></div>
+        <div class="m">${escapeHtml(m.giver || 'Sovereign')} · ${riskIcon(m.risk)} ${riskLabel(m.risk)} · <span class="badge status-${m.status}" style="margin:0;">${statusIcon(m.status)} ${statusLabel(m.status)}</span></div>
       </div>
       <div class="acts"></div>
     </div>`);
