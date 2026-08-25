@@ -29,8 +29,11 @@ drop function if exists public.my_granted_category_ids() cascade;
 drop function if exists public.protect_founder_accounts_update() cascade;
 drop function if exists public.protect_founder_accounts_delete() cascade;
 
-delete from storage.objects where bucket_id = 'chat-images';
-delete from storage.buckets where id = 'chat-images';
+-- Supabase blocks direct SQL DELETE on storage.objects/storage.buckets
+-- ("Direct deletion from storage tables is not allowed") — it has to go
+-- through the Storage API instead. The old chat-images bucket is harmless
+-- to leave in place (nothing in the new app references it), but if you want
+-- it gone: Dashboard > Storage > chat-images > "..." > Delete bucket.
 
 -- Old founder accounts (admin/ramsey) are left in auth.users untouched —
 -- harmless leftovers. Delete them yourself in Supabase Dashboard >
@@ -125,11 +128,9 @@ create policy "mission-map admin delete" on storage.objects
 -- 3. Seed the single admin account
 --
 -- Email is fixed/synthetic (never shown in the UI — the admin login only
--- asks for a password). Change the password immediately after your first
--- login: Supabase Dashboard > Authentication > Users >
--- sovereign-admin@tablet.local > "..." > Reset password.
+-- asks for a password).
 --
--- Default password: ChangeMe123!
+-- Password: raptor
 -- ---------------------------------------------------------------------------
 do $$
 declare
@@ -142,7 +143,7 @@ begin
       raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token
     ) values (
       new_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-      'sovereign-admin@tablet.local', crypt('ChangeMe123!', gen_salt('bf')),
+      'sovereign-admin@tablet.local', crypt('raptor', gen_salt('bf')),
       now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}', '', ''
     );
     insert into auth.identities (
@@ -160,4 +161,9 @@ end $$;
 --   select * from public.app_settings;
 --   select * from public.missions;
 --   select email from auth.users where email = 'sovereign-admin@tablet.local';
+--
+-- If sovereign-admin@tablet.local already existed from a previous run and
+-- you want to (re)set its password to "raptor", do it in Supabase Dashboard
+-- > Authentication > Users > sovereign-admin@tablet.local > Reset password
+-- (this script only sets the password on first creation).
 -- ============================================================================

@@ -7,8 +7,8 @@ site talking directly to Supabase.
 
 ## 1. Run the schema
 
-Open your existing Supabase project → SQL Editor → paste the whole contents
-of `schema.sql` → Run.
+Open your Supabase project → SQL Editor → paste the whole contents of
+`schema.sql` → Run.
 
 This **drops the entire old chat-app schema** (roles, threads, messages,
 categories, the `chat-images` bucket, etc. — everything) and replaces it
@@ -18,11 +18,8 @@ with:
 - `app_settings` — a single row holding the current map image URL and the
   self-destruct flag
 - a `mission-map` storage bucket (public read) for the map image
-- one seeded admin login: `sovereign-admin@tablet.local` /
-  **`ChangeMe123!`** — change this password immediately after your first
-  login (Supabase Dashboard → Authentication → Users → that email → Reset
-  password). It's never shown in the UI; the admin login only asks for a
-  password.
+- one seeded admin login: `sovereign-admin@tablet.local` / **`raptor`**.
+  It's never shown in the UI — the admin login only asks for a password.
 
 Your old `admin` / `ramsey` accounts are left alone in `auth.users` (not
 deleted) but have no special power anymore. Note: in this new schema *any*
@@ -33,9 +30,9 @@ them from Authentication → Users if you don't want that.
 ## 2. Deploy
 
 Push `index.html` (and `schema.sql`, just for reference) to your repo and
-redeploy on Vercel as a static site. You can remove the old `api/` folder,
-`package.json`, and `vercel.json` from your repo — they're gone from this
-delivery since nothing server-side is needed anymore.
+redeploy on Vercel as a static site. The old `api/` folder, `package.json`,
+and `vercel.json` are gone from this delivery — nothing server-side is
+needed anymore, so remove them from your repo too if they're still there.
 
 ## How it works
 
@@ -46,8 +43,8 @@ delivery since nothing server-side is needed anymore.
 - The map shows glowing mission pins. Click one to open mission details on
   the right (giver, risk, status, briefing, reward).
 - **Admin access** is a small, barely-visible dot in the bottom-right corner
-  of the screen. Click it, enter the admin password, and an "ADMIN" badge
-  appears with **Panel** and **Exit** buttons.
+  of the screen. Click it, enter the password (`raptor`), and an "ADMIN"
+  badge appears with **Panel** and **Exit** buttons.
 - The **admin panel** has three tabs:
   - **Missions** — "Place New Mission" lets you click anywhere on the map to
     drop a pin, then fill in the details. Existing missions can be edited or
@@ -71,10 +68,9 @@ the admin panel's Map tab. You can even place test missions against the
 placeholder; they'll be correctly positioned once you upload the real map
 (as long as it has a similar aspect ratio).
 
-## Note on the access model
+## Changing the admin password later
 
-You asked for the admin entry to just be "a little button somewhere... not
-very visible" — that's what the bottom-right dot is. There's no separate
-login for regular viewers; the map itself is open to anyone who presses
-Connect. If that's not what you meant, tell me and I'll adjust (e.g. requiring
-a shared passcode before the map is visible at all).
+Supabase Dashboard → Authentication → Users → `sovereign-admin@tablet.local`
+→ "..." → Reset password. (The schema script only sets the password the
+first time it creates that account — re-running `schema.sql` won't reset it
+if the account already exists.)
