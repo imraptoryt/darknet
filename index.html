@@ -3,145 +3,114 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>SOVEREIGN // MISSION UPLINK</title>
+<title>SOVEREIGN // UPLINK</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   :root{
-    --bg:#050302; --bg2:#0c0704; --panel:#120b07; --panel2:#180f09; --border:#3a2211;
-    --accent:#ff6a1a; --accent2:#ffb347; --accent-dim:#7a3d14;
-    --text:#ffe6cf; --dim:#9c7454;
-    --danger:#ff3b3b; --ok:#4caf7a; --warn:#ffd23b; --extreme:#e63bff;
-    font-family:'Share Tech Mono', monospace;
+    --bg:#050302; --panel:#0c0806; --panel2:#120c08;
+    --accent:#ff6a1a; --accent2:#ffb347; --accent-dim:#7a3a12;
+    --danger:#ff3b3b; --ok:#3bff8f;
+    --text:#f2e6d8; --dim:#8a7a68; --border:#2a1c10;
   }
-  *{box-sizing:border-box;}
-  html,body{ margin:0; padding:0; height:100%; background:var(--bg); color:var(--text); overflow:hidden; font-family:'Share Tech Mono', monospace; }
-  ::selection{ background:var(--accent); color:#160900; }
-  ::-webkit-scrollbar{ width:8px; }
-  ::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
-  ::-webkit-scrollbar-track{ background:transparent; }
-  h1,h2,h3{ font-family:'Orbitron', sans-serif; margin:0; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; background:var(--bg); color:var(--text);
+    font-family:'Share Tech Mono', monospace; overflow:hidden; }
+  h1,h2,h3,.brand{ font-family:'Orbitron', sans-serif; }
   .hidden-el{ display:none !important; }
-
-  body::before{
-    content:''; position:fixed; inset:0; pointer-events:none; z-index:200;
-    background:repeating-linear-gradient(0deg, rgba(255,106,26,0.025) 0px, rgba(255,106,26,0.025) 1px, transparent 2px, transparent 3px);
-    mix-blend-mode:overlay;
-  }
-  #grid-bg{ position:fixed; inset:0; z-index:0;
-    background:
-      radial-gradient(ellipse at 30% 20%, rgba(255,106,26,0.10) 0%, transparent 55%),
-      radial-gradient(ellipse at 80% 80%, rgba(255,106,26,0.07) 0%, transparent 55%),
-      var(--bg);
-  }
-  #grid-bg::before{
-    content:''; position:absolute; inset:0;
-    background-image:
-      linear-gradient(rgba(255,106,26,0.08) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,106,26,0.08) 1px, transparent 1px);
-    background-size:42px 42px;
-  }
-  #particles-bg{ position:fixed; inset:0; z-index:1; pointer-events:none; }
-
-  .glow-text{ text-shadow:0 0 8px rgba(255,106,26,0.65), 0 0 22px rgba(255,106,26,0.3); }
-  .btn{ font-family:'Share Tech Mono', monospace; letter-spacing:1px; text-transform:uppercase; cursor:pointer;
-    background:var(--accent); color:#160900; border:none; padding:11px 20px; font-weight:bold; font-size:12.5px;
-    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
-    box-shadow:0 2px 0 rgba(0,0,0,0.25), 0 0 0 rgba(255,106,26,0);
-    transition:filter .15s, transform .12s, box-shadow .15s; }
-  .btn:hover{ filter:brightness(1.18); transform:translateY(-1px); box-shadow:0 4px 14px rgba(255,106,26,0.35); }
-  .btn:active{ transform:scale(0.97) translateY(0); }
-  .btn:disabled{ opacity:0.45; cursor:not-allowed; transform:none !important; box-shadow:none !important; }
-  .btn.secondary{ background:transparent; color:var(--accent2); border:1px solid var(--accent-dim); box-shadow:none; }
-  .btn.secondary:hover{ border-color:var(--accent); box-shadow:0 4px 14px rgba(255,106,26,0.15); }
-  .btn.danger{ background:var(--danger); color:#1a0000; }
-  .btn.danger:hover{ box-shadow:0 4px 14px rgba(255,59,59,0.4); }
-  .btn.small{ padding:7px 12px; font-size:11px; }
-  .btn.block{ width:100%; }
-
-  input[type=text], input[type=password], input[type=number], textarea, select{
-    width:100%; padding:10px 12px; background:#0a0503; border:1px solid var(--border); color:var(--text);
-    font-family:'Share Tech Mono', monospace; font-size:13px; outline:none; border-radius:2px;
-  }
-  input:focus, textarea:focus, select:focus{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
-  textarea{ resize:vertical; min-height:80px; }
-  label{ display:block; font-size:10.5px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+  button{ font-family:inherit; }
+  input, select, textarea{ font-family:inherit; background:var(--panel2); color:var(--text);
+    border:1px solid var(--border); padding:9px 11px; width:100%; border-radius:2px; outline:none; }
+  input:focus, select:focus, textarea:focus{ border-color:var(--accent); }
+  label{ display:block; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--dim); margin-bottom:6px; }
   .field{ margin-bottom:14px; }
-  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 
-  /* ---------------- SPLASH ---------------- */
-  #splash-screen{ position:fixed; inset:0; z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px; background:radial-gradient(ellipse at center, #170c05 0%, var(--bg) 70%); }
-  #splash-screen .sigil{ font-size:52px; }
-  #splash-screen h1{ font-size:30px; letter-spacing:6px; color:var(--accent); }
-  #splash-screen p{ color:var(--dim); font-size:12px; letter-spacing:3px; text-transform:uppercase; margin-top:-14px; }
-  #connect-btn{ font-size:15px; padding:16px 46px; }
+  #particles-bg{ position:fixed; inset:0; z-index:0; pointer-events:none; opacity:0.55; }
 
-  /* ---------------- HACK SEQUENCE ---------------- */
-  #hack-screen{ position:fixed; inset:0; z-index:55; display:none; align-items:center; justify-content:center; background:var(--bg); }
-  #hack-screen.visible{ display:flex; }
-  #hack-term{ width:min(620px,88vw); border:1px solid var(--border); background:rgba(10,5,3,0.9); padding:24px 26px; box-shadow:0 0 50px rgba(255,106,26,0.1), inset 0 0 40px rgba(255,106,26,0.04); }
-  #hack-lines{ min-height:210px; }
-  #hack-lines .line{ font-size:13px; line-height:2; color:var(--accent2); white-space:pre-wrap; }
-  #hack-lines .line.blocked{ color:var(--danger); }
-  #hack-lines .line.ok{ color:var(--ok); }
-  #hack-progress{ margin-top:16px; height:4px; background:var(--border); overflow:hidden; }
-  #hack-progress>div{ height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .2s linear; }
+  .btn{ background:linear-gradient(180deg, var(--accent), #b7480e); color:#0c0602; border:none;
+    padding:11px 22px; font-size:12.5px; letter-spacing:1.5px; text-transform:uppercase; font-weight:700;
+    cursor:pointer; clip-path:polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    transition:transform .12s ease, box-shadow .12s ease; }
+  .btn:hover{ transform:translateY(-1px); box-shadow:0 4px 18px rgba(255,106,26,0.4); }
+  .btn:active{ transform:translateY(0); }
+  .btn.secondary{ background:transparent; color:var(--accent2); border:1px solid var(--accent-dim); }
+  .btn.secondary:hover{ box-shadow:0 0 14px rgba(255,106,26,0.25); }
+  .btn.danger{ background:linear-gradient(180deg, var(--danger), #8a1010); color:#160303; }
+  .btn.small{ padding:7px 14px; font-size:11px; }
+  .btn:disabled{ opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
 
-  /* ---------------- LOCKOUT ---------------- */
-  #lockout-screen{ position:fixed; inset:0; z-index:90; display:none; align-items:center; justify-content:center; background:#0d0000; text-align:center; padding:20px; overflow:hidden; }
-  #lockout-screen.visible{ display:flex; }
-  #lockout-screen::before{ content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
-    background:radial-gradient(ellipse at center, rgba(255,20,20,0.22) 0%, transparent 62%);
-    animation:siren-sweep 1.8s ease-in-out infinite; }
-  #lockout-screen::after{ content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
-    box-shadow:inset 0 0 120px rgba(255,0,0,0.35); animation:siren-sweep 1.8s ease-in-out infinite reverse; }
-  @keyframes siren-sweep{ 0%,100%{ opacity:0.35; } 50%{ opacity:1; } }
-  .lockout-inner{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:10px; }
-  .lockout-siren-line{ font-family:'Orbitron',sans-serif; font-weight:800; font-size:14px; letter-spacing:5px; color:#ff5c5c; text-transform:uppercase; animation:flicker 1.3s infinite; }
-  #lockout-title{ color:var(--danger); font-size:30px; letter-spacing:3px; text-shadow:0 0 16px rgba(255,59,59,0.8), 0 0 44px rgba(255,59,59,0.4); animation:flicker 2.2s infinite; margin:6px 0; }
-  .lockout-siren-line.small{ font-size:12px; letter-spacing:2px; color:#ff9a9a; }
-  .lockout-translation{ color:#ffb3b3; font-size:11.5px; max-width:480px; letter-spacing:1px; opacity:0.7; margin-top:2px; }
-  @keyframes flicker{ 0%,100%{opacity:1;} 47%{opacity:1;} 48%{opacity:0.4;} 49%{opacity:1;} 92%{opacity:1;} 93%{opacity:0.3;} 94%{opacity:1;} }
-  #lockout-admin-btn{ position:fixed; bottom:16px; left:16px; width:14px; height:14px; border-radius:50%;
-    background:rgba(255,59,59,0.28); border:1px solid rgba(255,59,59,0.4); cursor:pointer; z-index:95; padding:0;
-    box-shadow:0 0 8px rgba(255,59,59,0.35); animation:admin-dot-pulse 3s ease-in-out infinite; }
-  #lockout-admin-btn:hover{ background:rgba(255,59,59,0.6); box-shadow:0 0 14px rgba(255,59,59,0.7); }
+  /* ============ SPLASH ============ */
+  #splash-screen{ position:fixed; inset:0; z-index:50; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:26px; text-align:center; background:radial-gradient(ellipse at center, #120a06 0%, #050302 70%); }
+  #splash-screen h1{ font-size:38px; letter-spacing:6px; color:var(--accent2); text-shadow:0 0 26px rgba(255,106,26,0.5); margin:0; }
+  #splash-screen .sub{ color:var(--dim); font-size:12.5px; letter-spacing:3px; text-transform:uppercase; }
+  #splash-screen .tag{ color:var(--accent-dim); font-size:11px; letter-spacing:2px; max-width:440px; }
 
-  /* ---------------- TABLET APP ---------------- */
-  #tablet-app{ position:fixed; inset:0; z-index:5; display:none; flex-direction:column; }
-  #tablet-app.visible{ display:flex; }
-  #topbar{ height:56px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 18px; border-bottom:1px solid var(--border); background:var(--panel); z-index:10;
-    box-shadow:0 1px 0 rgba(255,106,26,0.12), 0 6px 24px rgba(0,0,0,0.35); }
-  #topbar .brand{ font-family:'Orbitron',sans-serif; font-weight:800; letter-spacing:2px; color:var(--accent); font-size:15px; }
-  #topbar .brand span{ color:var(--accent2); font-weight:600; }
-  #topbar .right{ display:flex; align-items:center; gap:16px; }
-  #topbar .status{ font-size:10.5px; color:var(--ok); letter-spacing:1px; display:flex; align-items:center; gap:6px; }
-  #topbar .status .dot{ width:6px; height:6px; border-radius:50%; background:var(--ok); box-shadow:0 0 6px var(--ok); }
-  #topbar .clock{ font-size:11px; color:var(--dim); }
+  /* ============ HACK SEQUENCE ============ */
+  #hack-screen{ position:fixed; inset:0; z-index:60; background:#020101; display:flex; align-items:center; justify-content:center; padding:40px; }
+  #hack-log{ width:100%; max-width:720px; height:70vh; overflow:hidden; border:1px solid var(--accent-dim);
+    background:rgba(10,6,3,0.85); padding:22px; box-shadow:0 0 40px rgba(255,106,26,0.15) inset; }
+  #hack-log .line{ font-size:13px; margin-bottom:9px; opacity:0; animation:lineIn .15s forwards; color:var(--text); }
+  #hack-log .line.blocked{ color:var(--danger); }
+  #hack-log .line.ok{ color:var(--ok); }
+  @keyframes lineIn{ from{ opacity:0; transform:translateX(-6px); } to{ opacity:1; transform:translateX(0); } }
+  #hack-log .cursor{ display:inline-block; width:8px; height:14px; background:var(--accent); animation:blink 0.8s infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  /* ============ LOCKOUT ============ */
+  #lockout-screen{ position:fixed; inset:0; z-index:70; background:#0a0000; display:flex; align-items:center; justify-content:center;
+    text-align:center; padding:30px; }
+  #lockout-screen::before{ content:''; position:absolute; inset:0;
+    background:radial-gradient(circle at 50% 50%, rgba(255,20,20,0.18), transparent 60%);
+    animation:siren-sweep 2.2s ease-in-out infinite; }
+  @keyframes siren-sweep{ 0%,100%{ box-shadow:inset 0 0 90px rgba(255,0,0,0.05);} 50%{ box-shadow:inset 0 0 160px rgba(255,0,0,0.35);} }
+  .lockout-inner{ position:relative; z-index:2; max-width:640px; }
+  .lockout-siren-line{ color:var(--danger); font-size:15px; letter-spacing:5px; margin-bottom:14px; animation:flicker 1.6s infinite; }
+  .lockout-siren-line.small{ font-size:11px; letter-spacing:3px; color:var(--accent2); margin-top:16px; }
+  @keyframes flicker{ 0%,100%{ opacity:1;} 45%{ opacity:0.55;} 50%{ opacity:1;} 55%{ opacity:0.4;} 60%{ opacity:1;} }
+  #lockout-title{ font-size:32px; letter-spacing:4px; color:#ff5050; text-shadow:0 0 30px rgba(255,0,0,0.5); margin:6px 0; }
+  .lockout-translation{ color:var(--dim); font-size:12px; letter-spacing:1px; margin:8px 0; }
+  #lockout-admin-btn{ position:fixed; bottom:18px; left:18px; width:14px; height:14px; border-radius:50%;
+    background:var(--accent-dim); border:1px solid var(--accent); cursor:pointer; opacity:0.55;
+    box-shadow:0 0 10px rgba(255,106,26,0.4); z-index:3; padding:0; }
+  #lockout-admin-btn:hover{ opacity:1; }
+
+  /* ============ TABLET APP ============ */
+  #tablet-app{ position:relative; z-index:1; height:100vh; display:flex; flex-direction:column; }
+  #topbar{ display:flex; align-items:center; justify-content:space-between; padding:12px 22px;
+    border-bottom:1px solid var(--border); background:linear-gradient(180deg, var(--panel), rgba(12,8,6,0.4)); flex-shrink:0; }
+  .brand{ font-size:15px; letter-spacing:3px; color:var(--accent2); }
+  .brand span{ color:var(--dim); font-weight:400; }
+  #topbar .right{ display:flex; align-items:center; gap:18px; }
+  .clock{ font-size:12.5px; color:var(--dim); letter-spacing:1px; }
+  .status{ display:flex; align-items:center; gap:7px; font-size:11px; letter-spacing:1.5px; color:var(--ok); text-transform:uppercase; }
+  .status .dot{ width:7px; height:7px; border-radius:50%; background:var(--ok); box-shadow:0 0 8px var(--ok); animation:pulse-dot 1.6s infinite; }
+  @keyframes pulse-dot{ 50%{ opacity:0.35; } }
 
   #main-area{ flex:1; display:flex; overflow:hidden; position:relative; }
   #map-stage{ flex:1; display:flex; overflow:hidden; position:relative; min-width:0; }
   #map-wrap{ flex:1; overflow:auto; position:relative; background:#08050380; cursor:grab; user-select:none; }
   #map-wrap.dragging{ cursor:grabbing; }
   #map-container{ position:relative; width:100%; }
-  #map-image{ display:block; width:100%; height:auto; user-select:none; -webkit-user-drag:none; }
-  #map-placeholder{ width:100%; aspect-ratio:16/9; background:
-      repeating-linear-gradient(45deg, rgba(255,106,26,0.04) 0 2px, transparent 2px 26px),
-      repeating-linear-gradient(-45deg, rgba(255,106,26,0.04) 0 2px, transparent 2px 26px), #0a0503;
-    display:flex; align-items:center; justify-content:center; }
-  #map-placeholder span{ color:var(--dim); font-size:13px; letter-spacing:2px; text-transform:uppercase; border:1px dashed var(--border); padding:16px 26px; }
-  #pins-layer{ position:absolute; inset:0; cursor:default; }
-  #pins-layer.place-mode{ cursor:crosshair; }
-  .mission-pin{ position:absolute; transform:translate(-50%,-50%); width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; cursor:pointer; background:radial-gradient(circle at 35% 30%, #2a1305, #0c0503); border:2px solid var(--accent); box-shadow:0 0 10px rgba(255,106,26,0.6), 0 6px 10px rgba(0,0,0,0.5); transition:transform .15s cubic-bezier(.3,1.5,.5,1), box-shadow .15s; }
-  .mission-pin:hover{ transform:translate(-50%,-50%) scale(1.22) translateY(-2px); box-shadow:0 0 16px rgba(255,106,26,0.85), 0 10px 14px rgba(0,0,0,0.55); }
-  .mission-pin.selected{ box-shadow:0 0 0 3px rgba(255,179,71,0.5), 0 0 16px rgba(255,106,26,0.9); }
-  .mission-pin.status-in_progress{ border-color:var(--warn); box-shadow:0 0 10px rgba(255,210,59,0.6); animation:pulse 1.6s infinite; }
-  .mission-pin.status-completed{ border-color:var(--ok); box-shadow:0 0 8px rgba(76,175,122,0.5); opacity:0.75; }
-  .mission-pin.status-failed{ border-color:var(--danger); box-shadow:0 0 8px rgba(255,59,59,0.5); opacity:0.6; }
-  .mission-pin.locked{ border-color:#8a8a8a; filter:grayscale(0.55); }
-  .mission-pin.pin-hidden-admin{ opacity:0.4; border-style:dashed; }
-  @keyframes pulse{ 0%,100%{ box-shadow:0 0 8px rgba(255,210,59,0.5);} 50%{ box-shadow:0 0 16px rgba(255,210,59,0.9);} }
+  #map-image{ display:block; width:100%; height:auto; user-select:none; pointer-events:none; }
+  #map-placeholder{ display:flex; align-items:center; justify-content:center; height:70vh; color:var(--dim);
+    font-size:13px; letter-spacing:2px; border:1px dashed var(--border); margin:30px; }
+  #pins-layer{ position:absolute; inset:0; }
+
+  .mission-pin{ position:absolute; transform:translate(-50%,-50%); width:34px; height:34px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer;
+    background:radial-gradient(circle, rgba(255,106,26,0.9), rgba(120,40,10,0.9));
+    border:2px solid var(--accent2); box-shadow:0 0 14px rgba(255,106,26,0.55); transition:transform .15s ease;
+    animation:pin-bounce 2.4s ease-in-out infinite; z-index:5; }
+  @keyframes pin-bounce{ 0%,100%{ transform:translate(-50%,-50%) scale(1);} 50%{ transform:translate(-50%,-50%) scale(1.08);} }
+  .mission-pin:hover{ transform:translate(-50%,-50%) scale(1.18); z-index:6; }
+  .mission-pin.selected{ border-color:#fff; box-shadow:0 0 22px rgba(255,255,255,0.6); }
+  .mission-pin.status-completed{ background:radial-gradient(circle, rgba(59,255,143,0.85), rgba(10,80,40,0.9)); border-color:var(--ok); }
+  .mission-pin.status-failed{ background:radial-gradient(circle, rgba(255,59,59,0.85), rgba(80,10,10,0.9)); border-color:var(--danger); }
+  .mission-pin.status-in_progress{ background:radial-gradient(circle, rgba(255,179,71,0.85), rgba(120,70,10,0.9)); }
+  .mission-pin.locked{ animation:none; opacity:0.85; }
+  .mission-pin.pin-hidden-admin{ outline:2px dashed var(--dim); outline-offset:3px; }
 
   #place-hint{ position:absolute; top:14px; left:50%; transform:translateX(-50%); background:var(--panel2); border:1px solid var(--accent); color:var(--accent2); font-size:11.5px; letter-spacing:1px; padding:9px 18px; text-transform:uppercase; z-index:15; }
   #zoom-indicator{ position:absolute; bottom:16px; left:16px; z-index:14; background:var(--panel2); border:1px solid var(--border); color:var(--dim); font-size:11px; letter-spacing:1px; padding:7px 12px; cursor:pointer; user-select:none; }
@@ -166,97 +135,76 @@
     padding:22px 20px; overflow-y:auto; box-shadow:-16px 0 40px rgba(0,0,0,0.45), -1px 0 0 rgba(255,106,26,0.15);
     transform:translateX(100%); opacity:0; transition:transform .22s ease, opacity .22s ease; pointer-events:none; }
   #detail-panel.open{ transform:translateX(0); opacity:1; pointer-events:auto; }
-  #detail-panel .close-btn{ float:right; background:transparent; border:none; color:var(--dim); font-size:16px; cursor:pointer; }
-  #detail-panel .close-btn:hover{ color:var(--text); }
-  #detail-panel h2{ font-size:17px; color:var(--accent2); margin-bottom:4px; padding-right:20px; }
-  #detail-panel .giver{ font-size:11px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; margin-bottom:16px; }
-  #detail-panel .giver b{ color:var(--accent); }
-  .badge{ display:inline-flex; align-items:center; gap:4px; font-size:10px; padding:4px 10px; border-radius:10px; text-transform:uppercase; letter-spacing:1px; border:1px solid; margin-right:6px; margin-bottom:14px; background:rgba(255,255,255,0.02); }
+  #detail-panel h2{ font-size:18px; color:var(--accent2); margin:6px 0 4px; padding-right:26px; }
+  #detail-panel .giver{ font-size:11.5px; color:var(--dim); margin-bottom:14px; }
+  #detail-panel .close-btn{ position:absolute; top:16px; right:16px; background:transparent; border:1px solid var(--border);
+    color:var(--dim); width:26px; height:26px; cursor:pointer; }
+  #detail-panel .close-btn:hover{ color:var(--accent2); border-color:var(--accent); }
+  #detail-panel .desc{ font-size:12.5px; line-height:1.6; color:var(--text); margin:16px 0; white-space:pre-wrap; }
+  #detail-panel .reward{ font-size:12.5px; color:var(--accent2); margin:10px 0; }
+  .badge{ display:inline-flex; align-items:center; gap:5px; font-size:10.5px; letter-spacing:1px; text-transform:uppercase;
+    padding:4px 10px; border-radius:10px; border:1px solid var(--border); margin:3px 6px 3px 0; }
   .badge.risk-low{ color:var(--ok); border-color:var(--ok); }
-  .badge.risk-medium{ color:var(--accent2); border-color:var(--accent); }
-  .badge.risk-high{ color:var(--danger); border-color:var(--danger); }
-  .badge.risk-extreme{ color:var(--extreme); border-color:var(--extreme); }
-  .badge.status-open{ color:var(--accent2); border-color:var(--accent); }
-  .badge.status-in_progress{ color:var(--warn); border-color:var(--warn); }
-  .badge.status-completed{ color:var(--ok); border-color:var(--ok); }
-  .badge.status-failed{ color:var(--danger); border-color:var(--danger); }
-  #detail-panel .desc-label{ font-size:10.5px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin:14px 0 6px; }
-  #detail-panel .desc{ font-size:13px; line-height:1.6; color:var(--text); white-space:pre-wrap; }
-  #detail-panel .reward{ margin-top:16px; padding:12px 14px; background:var(--panel2); border:1px solid var(--border); font-size:13px; }
-  #detail-panel .reward b{ color:var(--accent2); }
-  #detail-panel .admin-row{ display:flex; gap:8px; margin-top:20px; }
+  .badge.risk-medium{ color:var(--accent2); border-color:var(--accent-dim); }
+  .badge.risk-high{ color:#ff8a3b; border-color:#ff8a3b; }
+  .badge.risk-extreme{ color:var(--danger); border-color:var(--danger); }
+  .badge.status-open{ color:var(--accent2); }
+  .badge.status-in_progress{ color:#ffb347; }
+  .badge.status-completed{ color:var(--ok); }
+  .badge.status-failed{ color:var(--danger); }
 
-  /* hidden admin trigger */
-  #hidden-admin-btn{ position:fixed; bottom:16px; right:16px; width:14px; height:14px; border-radius:50%;
-    background:rgba(255,106,26,0.28); border:1px solid rgba(255,106,26,0.4); cursor:pointer; z-index:16; padding:0;
-    box-shadow:0 0 8px rgba(255,106,26,0.35); animation:admin-dot-pulse 3s ease-in-out infinite; }
-  #hidden-admin-btn:hover{ background:rgba(255,106,26,0.6); box-shadow:0 0 14px rgba(255,106,26,0.7); }
-  @keyframes admin-dot-pulse{ 0%,100%{ opacity:0.6; } 50%{ opacity:1; } }
-  #admin-badge{ position:fixed; bottom:10px; right:36px; z-index:30; display:flex; gap:6px; align-items:center; background:var(--panel2); border:1px solid var(--accent-dim); padding:6px 10px; font-size:10.5px; letter-spacing:1px; color:var(--accent2); }
+  #hidden-admin-btn{ position:fixed; bottom:10px; right:10px; width:12px; height:12px; border-radius:50%;
+    background:rgba(255,106,26,0.35); border:1px solid rgba(255,106,26,0.5); cursor:pointer; z-index:40; padding:0; opacity:0.5; }
+  #hidden-admin-btn:hover{ opacity:1; }
+  #admin-badge{ position:fixed; bottom:10px; right:10px; z-index:40; display:flex; align-items:center; gap:8px;
+    background:var(--panel2); border:1px solid var(--accent-dim); padding:8px 12px; font-size:11px; color:var(--accent2); }
 
-  /* ---------------- MODALS ---------------- */
-  .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(3px); z-index:100; display:none; align-items:center; justify-content:center; padding:20px;
-    opacity:0; transition:opacity .16s ease; }
-  .modal-overlay.visible{ display:flex; opacity:1; }
-  .modal-card{ width:min(460px,94vw); max-height:88vh; overflow-y:auto; background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--border); padding:26px; box-shadow:0 24px 70px rgba(0,0,0,0.65), 0 0 50px rgba(255,106,26,0.1), inset 0 1px 0 rgba(255,255,255,0.03);
-    clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);
-    transform:scale(0.96) translateY(8px); transition:transform .18s cubic-bezier(.2,.9,.3,1.2); }
-  .modal-overlay.visible .modal-card{ transform:scale(1) translateY(0); }
-  .modal-card.wide{ width:min(720px,94vw); }
-  .modal-card h3{ font-size:15px; color:var(--accent); letter-spacing:1px; margin-bottom:18px; }
-  .modal-actions{ display:flex; gap:8px; margin-top:8px; }
-  .form-error{ font-size:12px; color:var(--danger); margin-top:6px; min-height:14px; }
-  .form-note{ font-size:11px; color:var(--dim); margin-top:8px; line-height:1.5; }
+  /* ============ MODALS ============ */
+  .modal-overlay{ position:fixed; inset:0; z-index:80; background:rgba(2,1,0,0.75); display:flex; align-items:center;
+    justify-content:center; opacity:0; pointer-events:none; transition:opacity .18s ease; }
+  .modal-overlay.visible{ opacity:1; pointer-events:auto; }
+  .modal-card{ background:linear-gradient(180deg, var(--panel), var(--panel2)); border:1px solid var(--accent-dim);
+    padding:26px 28px; width:420px; max-width:92vw; max-height:86vh; overflow-y:auto; position:relative;
+    box-shadow:0 0 60px rgba(255,106,26,0.15); transform:scale(0.96); transition:transform .18s ease; }
+  .modal-overlay.visible .modal-card{ transform:scale(1); }
+  .modal-card h2{ font-size:16px; color:var(--accent2); letter-spacing:2px; margin:0 0 18px; text-transform:uppercase; }
+  .modal-card .err{ color:var(--danger); font-size:11.5px; margin:8px 0; min-height:14px; }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+  .modal-card.wide{ width:640px; }
 
-  .icon-pick{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
-  .icon-pick button{ width:36px; height:36px; font-size:16px; background:#0a0503; border:1px solid var(--border); cursor:pointer; border-radius:4px; transition:transform .12s, border-color .12s; }
-  .icon-pick button:hover{ transform:translateY(-2px); border-color:var(--accent-dim); }
-  .icon-pick button.active{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), 0 0 10px rgba(255,106,26,0.4); }
+  #admin-panel-modal .tabs{ display:flex; gap:8px; margin-bottom:18px; border-bottom:1px solid var(--border); }
+  #admin-panel-modal .tab-btn{ background:transparent; border:none; color:var(--dim); padding:9px 14px; font-size:11.5px;
+    letter-spacing:1px; text-transform:uppercase; cursor:pointer; border-bottom:2px solid transparent; }
+  #admin-panel-modal .tab-btn.active{ color:var(--accent2); border-bottom-color:var(--accent); }
+  .admin-mission-row{ display:flex; align-items:center; gap:10px; padding:10px; border:1px solid var(--border); margin-bottom:8px; font-size:12px; }
+  .admin-mission-row .title{ flex:1; }
+  .admin-mission-row .tags{ display:flex; gap:6px; }
+  .admin-mission-row .tag{ font-size:9px; padding:2px 6px; border:1px solid var(--border); color:var(--dim); }
 
-  /* admin panel */
-  .admin-tabs{ display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:16px; }
-  .admin-tab{ padding:8px 14px; font-size:11.5px; letter-spacing:1px; text-transform:uppercase; color:var(--dim); cursor:pointer; border-bottom:2px solid transparent; }
-  .admin-tab.active{ color:var(--accent2); border-color:var(--accent); }
-  .admin-tab-panel{ display:none; }
-  .admin-tab-panel.active{ display:block; }
-  .mission-list-item{ display:flex; align-items:center; gap:10px; padding:10px; border:1px solid var(--border); margin-bottom:8px; background:var(--bg2); transition:border-color .15s, transform .12s; }
-  .mission-list-item:hover{ border-color:var(--accent-dim); transform:translateX(2px); }
-  .mission-list-item .ic{ font-size:16px; }
-  .mission-list-item .info{ flex:1; min-width:0; }
-  .mission-list-item .info .t{ font-size:12.5px; color:var(--text); }
-  .mission-list-item .info .m{ font-size:10.5px; color:var(--dim); margin-top:2px; }
-  .mission-list-item .acts{ display:flex; gap:6px; }
-  #map-upload-preview{ width:100%; max-height:160px; object-fit:cover; border:1px solid var(--border); margin-top:10px; display:none; }
-  .self-destruct-box{ border:1px solid var(--danger); background:rgba(255,59,59,0.06); padding:16px; }
-  .self-destruct-box p{ font-size:12px; color:#ffb3b3; line-height:1.6; margin:0 0 12px; }
-  .sd-status{ font-size:11px; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px; }
-  .sd-status.off{ color:var(--ok); }
-  .sd-status.on{ color:var(--danger); }
+  ::-webkit-scrollbar{ width:9px; height:9px; }
+  ::-webkit-scrollbar-track{ background:var(--panel); }
+  ::-webkit-scrollbar-thumb{ background:var(--accent-dim); }
 </style>
 </head>
 <body>
 
-<div id="grid-bg"></div>
 <canvas id="particles-bg"></canvas>
 
 <!-- ============ SPLASH ============ -->
 <div id="splash-screen">
-  <div class="sigil glow-text">◈</div>
-  <h1 class="glow-text">SOVEREIGN</h1>
-  <p>Mission Uplink Terminal</p>
+  <h1>◈ SOVEREIGN</h1>
+  <div class="sub">MISSION UPLINK TABLET</div>
+  <div class="tag">Encrypted field terminal for Sovereign operatives. Establish a secure connection to view active contracts.</div>
   <button class="btn" id="connect-btn">Connect</button>
 </div>
 
 <!-- ============ HACK SEQUENCE ============ -->
-<div id="hack-screen">
-  <div id="hack-term">
-    <div id="hack-lines"></div>
-    <div id="hack-progress"><div id="hack-progress-bar"></div></div>
-  </div>
+<div id="hack-screen" class="hidden-el">
+  <div id="hack-log"></div>
 </div>
 
 <!-- ============ LOCKOUT ============ -->
-<div id="lockout-screen">
+<div id="lockout-screen" class="hidden-el">
   <div class="lockout-inner">
     <div class="lockout-siren-line">⚠ ВНИМАНИЕ ⚠</div>
     <h1 id="lockout-title">СЕТЬ СКОМПРОМЕТИРОВАНА</h1>
@@ -268,7 +216,7 @@
 </div>
 
 <!-- ============ TABLET APP ============ -->
-<div id="tablet-app">
+<div id="tablet-app" class="hidden-el">
   <div id="topbar">
     <div class="brand">◈ SOVEREIGN <span>// UPLINK</span></div>
     <div class="right">
@@ -306,157 +254,149 @@
 <!-- ============ ADMIN LOGIN MODAL ============ -->
 <div class="modal-overlay" id="admin-login-modal">
   <div class="modal-card">
-    <h3>◈ ADMIN OVERRIDE — ENTER CIPHER</h3>
+    <h2>Admin Override</h2>
     <div class="field">
-      <label>Password</label>
-      <input type="password" id="admin-login-password" autocomplete="off" />
+      <label>Cipher</label>
+      <input type="password" id="admin-login-password" placeholder="Enter access cipher" />
     </div>
+    <div class="err" id="admin-login-error"></div>
     <div class="modal-actions">
+      <button class="btn secondary" id="admin-login-cancel-btn">Cancel</button>
       <button class="btn" id="admin-login-submit">Authenticate</button>
-      <button class="btn secondary" id="admin-login-cancel">Cancel</button>
     </div>
-    <div class="form-error" id="admin-login-error"></div>
   </div>
 </div>
 
 <!-- ============ MISSION FORM MODAL ============ -->
 <div class="modal-overlay" id="mission-form-modal">
   <div class="modal-card">
-    <h3 id="mission-form-title">New Mission</h3>
+    <h2 id="mission-form-title">New Mission</h2>
     <div class="field">
       <label>Title</label>
-      <input type="text" id="mf-title" />
+      <input type="text" id="mf-title" placeholder="Mission title" />
     </div>
     <div class="field">
-      <label>Mission Giver</label>
-      <input type="text" id="mf-giver" value="Sovereign" />
+      <label>Giver</label>
+      <input type="text" id="mf-giver" placeholder="Sovereign" />
     </div>
     <div class="field">
       <label>Description</label>
-      <textarea id="mf-description"></textarea>
+      <textarea id="mf-description" rows="4" placeholder="Mission briefing..."></textarea>
     </div>
     <div class="field">
       <label>Reward</label>
-      <input type="text" id="mf-reward" placeholder="e.g. $25,000 + supply drop" />
+      <input type="text" id="mf-reward" placeholder="e.g. $25,000" />
     </div>
-    <div class="row2">
-      <div class="field">
-        <label>Risk</label>
-        <select id="mf-risk">
-          <option value="low">Low</option>
-          <option value="medium" selected>Medium</option>
-          <option value="high">High</option>
-          <option value="extreme">Extreme</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Status</label>
-        <select id="mf-status">
-          <option value="open" selected>Open</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="failed">Failed</option>
-        </select>
-      </div>
+    <div class="field">
+      <label>Risk</label>
+      <select id="mf-risk">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+        <option value="extreme">Extreme</option>
+      </select>
     </div>
-    <label>Icon</label>
-    <div class="icon-pick" id="mf-icon-pick"></div>
+    <div class="field">
+      <label>Status</label>
+      <select id="mf-status">
+        <option value="open" selected>Open</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+        <option value="failed">Failed</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Icon</label>
+      <input type="text" id="mf-icon" placeholder="🎯" />
+    </div>
     <div class="field">
       <label>Lock Code (optional)</label>
-      <input type="text" id="mf-lock-code" placeholder="e.g. 7734 — blip stays locked on the map until this is entered" />
+      <input type="text" id="mf-lock-code" placeholder="e.g. 7734 — blip stays hidden on the map until this is entered" />
     </div>
     <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text); margin-bottom:16px;">
       <input type="checkbox" id="mf-hidden" style="width:auto;" />
       <label for="mf-hidden" style="margin:0; text-transform:none; letter-spacing:0; color:var(--text); font-size:12px;">Hide this blip from the map entirely (admin-only — no one else ever sees it)</label>
     </div>
+    <div class="err" id="mission-form-error"></div>
     <div class="modal-actions">
-      <button class="btn" id="mf-save-btn">Save Mission</button>
-      <button class="btn secondary" id="mf-cancel-btn">Cancel</button>
-      <button class="btn danger hidden-el" id="mf-delete-btn">Delete</button>
-    </div>
-    <div class="form-error" id="mf-error"></div>
-  </div>
-</div>
-
-<!-- ============ ADMIN PANEL MODAL ============ -->
-<div class="modal-overlay" id="admin-panel-modal">
-  <div class="modal-card wide">
-    <h3>◈ ADMIN CONTROL PANEL</h3>
-    <div class="admin-tabs">
-      <div class="admin-tab active" data-tab="missions">Missions</div>
-      <div class="admin-tab" data-tab="map">Map</div>
-      <div class="admin-tab" data-tab="killswitch">Kill Switch</div>
-    </div>
-
-    <div class="admin-tab-panel active" id="admin-tab-missions">
-      <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
-        <button class="btn small" id="admin-place-mission-btn">📍 Place New Mission</button>
-        <select id="admin-mission-filter" style="width:auto; min-width:160px;">
-          <option value="all">All Missions</option>
-          <option value="open">Open</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="failed">Failed</option>
-        </select>
-      </div>
-      <div id="admin-mission-list"></div>
-    </div>
-
-    <div class="admin-tab-panel" id="admin-tab-map">
-      <label>Upload Map Image</label>
-      <input type="file" id="map-upload-input" accept="image/*" />
-      <img id="map-upload-preview" />
-      <div class="form-note">Uploading replaces the current map for everyone immediately. Existing mission pins keep their position (percentage-based), so make sure the new map covers the same area.</div>
-      <div class="form-error" id="map-upload-error"></div>
-    </div>
-
-    <div class="admin-tab-panel" id="admin-tab-killswitch">
-      <div class="self-destruct-box">
-        <div class="sd-status off" id="sd-status-label">● NETWORK OPERATIONAL</div>
-        <p>Pressing this severs the tablet for everyone except admins. Regular operatives will see a lockout screen until an admin re-enables the network from this same panel.</p>
-        <button class="btn danger block" id="self-destruct-btn">Self-Destruct — Sever Network</button>
-      </div>
-    </div>
-
-    <div class="modal-actions" style="margin-top:20px;">
-      <button class="btn secondary" id="admin-panel-close-btn">Close</button>
+      <button class="btn secondary" id="mission-form-cancel-btn">Cancel</button>
+      <button class="btn danger hidden-el" id="mission-form-delete-btn">Delete</button>
+      <button class="btn" id="mission-form-save-btn">Save</button>
     </div>
   </div>
 </div>
 
 <!-- ============ UNLOCK MODAL ============ -->
 <div class="modal-overlay" id="unlock-modal">
-  <div class="modal-card" style="width:min(360px,90vw);">
-    <h3>🔒 LOCKED TRANSMISSION</h3>
+  <div class="modal-card">
+    <h2>Encrypted Transmission</h2>
     <div class="field">
-      <label>Enter Access Code</label>
-      <input type="text" id="unlock-code-input" autocomplete="off" />
+      <label>Access Code</label>
+      <input type="text" id="unlock-code-input" placeholder="Enter code" />
     </div>
+    <div class="err" id="unlock-error"></div>
     <div class="modal-actions">
-      <button class="btn" id="unlock-submit-btn">Unlock</button>
       <button class="btn secondary" id="unlock-cancel-btn">Cancel</button>
+      <button class="btn" id="unlock-submit-btn">Unlock</button>
     </div>
-    <div class="form-error" id="unlock-error"></div>
   </div>
 </div>
 
-<!-- ============ CONFIRM / ALERT MODALS ============ -->
-<div class="modal-overlay" id="confirm-modal">
-  <div class="modal-card" style="width:min(380px,90vw);">
-    <h3 id="confirm-modal-title">Confirm</h3>
-    <div id="confirm-modal-msg" style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:18px;white-space:pre-wrap;"></div>
+<!-- ============ ADMIN PANEL MODAL ============ -->
+<div class="modal-overlay" id="admin-panel-modal">
+  <div class="modal-card wide">
+    <h2>Sovereign Control Panel</h2>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="missions">Missions</button>
+      <button class="tab-btn" data-tab="map">Map</button>
+      <button class="tab-btn" data-tab="killswitch">Kill Switch</button>
+    </div>
+    <div id="admin-tab-missions" class="admin-tab">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px;">
+        <select id="admin-mission-filter" style="width:auto;">
+          <option value="all">All Statuses</option>
+          <option value="open">Open</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+        </select>
+        <button class="btn small" id="admin-place-mission-btn">+ Place Mission</button>
+      </div>
+      <div id="admin-mission-list"></div>
+    </div>
+    <div id="admin-tab-map" class="admin-tab hidden-el">
+      <div class="field">
+        <label>Upload Map Image</label>
+        <input type="file" id="admin-map-upload" accept="image/*" />
+      </div>
+      <div class="err" id="admin-map-error"></div>
+    </div>
+    <div id="admin-tab-killswitch" class="admin-tab hidden-el">
+      <div id="admin-killswitch-content"></div>
+    </div>
     <div class="modal-actions">
-      <button class="btn danger small" id="confirm-modal-ok">OK</button>
-      <button class="btn secondary small" id="confirm-modal-cancel">Cancel</button>
+      <button class="btn secondary" id="admin-panel-close-btn">Close</button>
     </div>
   </div>
 </div>
+
+<!-- ============ ALERT / CONFIRM MODALS ============ -->
 <div class="modal-overlay" id="alert-modal">
-  <div class="modal-card" style="width:min(380px,90vw);">
-    <h3 id="alert-modal-title">Notice</h3>
-    <div id="alert-modal-msg" style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:18px;white-space:pre-wrap;"></div>
+  <div class="modal-card">
+    <h2 id="alert-title">Notice</h2>
+    <p id="alert-message" style="font-size:12.5px; line-height:1.6;"></p>
     <div class="modal-actions">
-      <button class="btn small" id="alert-modal-ok">OK</button>
+      <button class="btn" id="alert-ok-btn">OK</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal-card">
+    <h2 id="confirm-title">Confirm</h2>
+    <p id="confirm-message" style="font-size:12.5px; line-height:1.6;"></p>
+    <div class="modal-actions">
+      <button class="btn secondary" id="confirm-cancel-btn">Cancel</button>
+      <button class="btn danger" id="confirm-ok-btn">Confirm</button>
     </div>
   </div>
 </div>
@@ -472,14 +412,11 @@ const ADMIN_EMAIL = "sovereign-ops@tablet.local";
 const DEFAULT_MAP_URL = "https://imgg.fr/r/NesguhGF.png";
 const ICONS = ["🎯","📦","🔫","💰","⚠️","🚨","🛠️","🗝️","🚗","☠️","💊","🏦","💣","🛥️","🧨"];
 
-/* ============================================================================
-   STATE
-   ========================================================================== */
 const state = {
   session: null,
   isAdmin: false,
   missions: [],
-  settings: { map_image_url: null, self_destruct: false, self_destruct_message: '' },
+  settings: null,
   selectedMissionId: null,
   mapDragMoved: false,
   mapZoom: 1,
@@ -487,7 +424,7 @@ const state = {
   placeMode: false,
   editingMissionId: null,
   pendingCoords: null,
-  selectedIcon: ICONS[0],
+  selectedIcon: '🎯',
   missionsChannel: null,
   settingsChannel: null,
 };
@@ -495,103 +432,107 @@ const state = {
 /* ============================================================================
    HELPERS
    ========================================================================== */
-function el(html){
-  const tpl = document.createElement('template');
-  tpl.innerHTML = html.trim();
-  return tpl.content.firstElementChild;
-}
+function el(html){ const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; }
 function escapeHtml(str){
-  const d = document.createElement('div');
-  d.textContent = str == null ? '' : String(str);
-  return d.innerHTML;
+  const d = document.createElement('div'); d.textContent = str == null ? '' : String(str); return d.innerHTML;
 }
 function riskLabel(r){ return { low:'Low', medium:'Medium', high:'High', extreme:'Extreme' }[r] || r; }
 function statusLabel(s){ return { open:'Open', in_progress:'In Progress', completed:'Completed', failed:'Failed' }[s] || s; }
-function riskIcon(r){ return { low:'●', medium:'▲', high:'⚡', extreme:'☠' }[r] || '●'; }
-function statusIcon(s){ return { open:'◇', in_progress:'◐', completed:'✔', failed:'✕' }[s] || '◇'; }
+function riskIcon(r){ return { low:'●', medium:'▲', high:'⚡', extreme:'☠' }[r] || ''; }
+function statusIcon(s){ return { open:'◇', in_progress:'◐', completed:'✔', failed:'✕' }[s] || ''; }
 function loadUnlockedIds(){
-  try{ return new Set(JSON.parse(localStorage.getItem('sovereign_unlocked') || '[]')); }
-  catch(e){ return new Set(); }
+  try{
+    const raw = localStorage.getItem('sovereign_unlocked');
+    return new Set(raw ? JSON.parse(raw) : []);
+  }catch(e){ return new Set(); }
 }
 function saveUnlockedIds(set){
-  try{ localStorage.setItem('sovereign_unlocked', JSON.stringify(Array.from(set))); }
-  catch(e){ /* ignore */ }
+  try{ localStorage.setItem('sovereign_unlocked', JSON.stringify([...set])); }catch(e){}
 }
 
-/* ---- Custom modal dialogs (no native confirm()/alert()) ---- */
-let _confirmCallback = null;
+/* ============================================================================
+   CUSTOM MODALS
+   ========================================================================== */
 function showAlert(message, danger){
-  document.getElementById('alert-modal-title').textContent = danger ? 'Error' : 'Notice';
-  document.getElementById('alert-modal-msg').textContent = message;
+  document.getElementById('alert-title').textContent = danger ? 'Error' : 'Notice';
+  document.getElementById('alert-message').textContent = message;
   document.getElementById('alert-modal').classList.add('visible');
 }
-function showConfirm(message, onConfirm, opts){
-  opts = opts || {};
-  document.getElementById('confirm-modal-title').textContent = opts.title || 'Confirm';
-  document.getElementById('confirm-modal-msg').textContent = message;
-  _confirmCallback = onConfirm;
-  document.getElementById('confirm-modal').classList.add('visible');
-}
-document.getElementById('alert-modal-ok').addEventListener('click', ()=>{
+document.getElementById('alert-ok-btn').addEventListener('click', ()=>{
   document.getElementById('alert-modal').classList.remove('visible');
 });
-document.getElementById('confirm-modal-ok').addEventListener('click', ()=>{
+
+let confirmCallback = null;
+function showConfirm(message, onConfirm, opts){
+  opts = opts || {};
+  document.getElementById('confirm-title').textContent = opts.title || 'Confirm';
+  document.getElementById('confirm-message').textContent = message;
+  confirmCallback = onConfirm;
+  document.getElementById('confirm-modal').classList.add('visible');
+}
+document.getElementById('confirm-cancel-btn').addEventListener('click', ()=>{
   document.getElementById('confirm-modal').classList.remove('visible');
-  const cb = _confirmCallback; _confirmCallback = null;
-  if(cb) cb();
+  confirmCallback = null;
 });
-document.getElementById('confirm-modal-cancel').addEventListener('click', ()=>{
+document.getElementById('confirm-ok-btn').addEventListener('click', ()=>{
   document.getElementById('confirm-modal').classList.remove('visible');
-  _confirmCallback = null;
+  const cb = confirmCallback;
+  confirmCallback = null;
+  if(cb) cb();
 });
 
 /* ============================================================================
-   ANIMATED BACKGROUND — small drifting squares
+   PARTICLES BACKGROUND
    ========================================================================== */
 (function particlesBG(){
   const canvas = document.getElementById('particles-bg');
   const ctx = canvas.getContext('2d');
-  let w, h, squares;
-  function spawnSquare(){
-    return {
-      x: Math.random() * w,
-      y: Math.random() * h,
-      size: 2 + Math.random() * 5,
-      vx: (Math.random() - 0.5) * 0.28,
-      vy: (Math.random() - 0.5) * 0.28,
-      alpha: 0.12 + Math.random() * 0.35,
-      hue: Math.random() < 0.15 ? '57,208,255' : '255,106,26',
-    };
-  }
+  let particles = [];
   function resize(){
-    w = canvas.width = window.innerWidth;
-    h = canvas.height = window.innerHeight;
-    const count = Math.min(90, Math.round((w * h) / 22000));
-    squares = Array.from({ length: count }, spawnSquare);
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
   }
-  window.addEventListener('resize', resize);
-  resize();
-  function draw(){
-    ctx.clearRect(0, 0, w, h);
-    squares.forEach(s => {
-      s.x += s.vx; s.y += s.vy;
-      if(s.x < -10) s.x = w + 10; if(s.x > w + 10) s.x = -10;
-      if(s.y < -10) s.y = h + 10; if(s.y > h + 10) s.y = -10;
-      ctx.fillStyle = `rgba(${s.hue},${s.alpha})`;
-      ctx.fillRect(s.x, s.y, s.size, s.size);
+  function init(){
+    resize();
+    particles = [];
+    const count = Math.floor((canvas.width * canvas.height) / 26000);
+    for(let i=0;i<count;i++){
+      particles.push({
+        x: Math.random()*canvas.width,
+        y: Math.random()*canvas.height,
+        size: 2 + Math.random()*4,
+        speedX: (Math.random()-0.5)*0.25,
+        speedY: (Math.random()-0.5)*0.25,
+        color: Math.random() > 0.5 ? '255,106,26' : '80,220,255',
+        alpha: 0.15 + Math.random()*0.35,
+      });
+    }
+  }
+  function tick(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    particles.forEach(p=>{
+      p.x += p.speedX; p.y += p.speedY;
+      if(p.x < 0) p.x = canvas.width; if(p.x > canvas.width) p.x = 0;
+      if(p.y < 0) p.y = canvas.height; if(p.y > canvas.height) p.y = 0;
+      ctx.fillStyle = `rgba(${p.color},${p.alpha})`;
+      ctx.fillRect(p.x, p.y, p.size, p.size);
     });
-    requestAnimationFrame(draw);
+    requestAnimationFrame(tick);
   }
-  draw();
+  window.addEventListener('resize', init);
+  init();
+  tick();
 })();
 
 /* ============================================================================
    CLOCK
    ========================================================================== */
 function tickClock(){
-  document.getElementById('topbar-clock').textContent = new Date().toLocaleTimeString([], { hour12:false });
+  const el = document.getElementById('topbar-clock');
+  if(el) el.textContent = new Date().toLocaleTimeString();
 }
 setInterval(tickClock, 1000);
+tickClock();
 
 /* ============================================================================
    HACK SEQUENCE
@@ -613,127 +554,119 @@ const HACK_LINES = [
   ["ENCRYPTION HANDSHAKE COMPLETE", 'ok'],
   ["UPLINK ACTIVE — WELCOME, OPERATIVE", 'ok'],
 ];
-function runHackSequence(done){
+
+function runHackSequence(){
   document.getElementById('splash-screen').classList.add('hidden-el');
-  const screen = document.getElementById('hack-screen');
-  const linesEl = document.getElementById('hack-lines');
-  const bar = document.getElementById('hack-progress-bar');
-  linesEl.innerHTML = ''; bar.style.width = '0%';
-  screen.classList.add('visible');
+  document.getElementById('hack-screen').classList.remove('hidden-el');
+  const log = document.getElementById('hack-log');
+  log.innerHTML = '';
   let i = 0;
-  function next(){
+  function nextLine(){
     if(i >= HACK_LINES.length){
-      setTimeout(()=>{ screen.classList.remove('visible'); done(); }, 400);
+      setTimeout(enterTablet, 500);
       return;
     }
     const [text, cls] = HACK_LINES[i];
-    const div = document.createElement('div');
-    div.className = 'line' + (cls ? ' ' + cls : '');
-    div.textContent = text;
-    linesEl.appendChild(div);
-    bar.style.width = Math.round(((i+1)/HACK_LINES.length)*100) + '%';
+    const line = el(`<div class="line ${cls || ''}">${escapeHtml(text)}</div>`);
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
     i++;
-    setTimeout(next, 320 + Math.random()*280);
+    setTimeout(nextLine, 220 + Math.random()*180);
   }
-  next();
+  nextLine();
 }
+document.getElementById('connect-btn').addEventListener('click', runHackSequence);
 
 /* ============================================================================
-   SETTINGS / LOCKOUT
+   BOOT
    ========================================================================== */
+async function boot(){
+  await sb.auth.signOut().catch(()=>{});
+  state.isAdmin = false;
+  await loadSettings();
+  subscribeSettingsRealtime();
+  if(state.settings && state.settings.self_destruct){
+    showLockout();
+  }
+}
+
 async function loadSettings(){
   const { data, error } = await sb.from('app_settings').select('*').eq('id', 1).maybeSingle();
   if(!error && data) state.settings = data;
 }
-function showLockout(){
-  document.getElementById('splash-screen').classList.add('hidden-el');
-  document.getElementById('hack-screen').classList.remove('visible');
-  document.getElementById('tablet-app').classList.remove('visible');
-  document.getElementById('lockout-msg').textContent = state.settings.self_destruct_message || 'SOVEREIGN UPLINK SEVERED';
-  document.getElementById('lockout-screen').classList.add('visible');
-}
-function hideLockout(){
-  document.getElementById('lockout-screen').classList.remove('visible');
-}
-
-/* ============================================================================
-   BOOTSTRAP
-   ========================================================================== */
-async function boot(){
-  await loadSettings();
-
-  // Never start already authenticated as admin, even if a Supabase session
-  // token is still sitting in this browser from a previous visit — the
-  // admin panel must always be reached fresh via the hidden button + password.
-  await sb.auth.signOut().catch(()=>{});
-  state.session = null;
-  state.isAdmin = false;
-
-  subscribeSettingsRealtime();
-
-  if(state.settings.self_destruct){
-    showLockout();
-    return;
-  }
-  // splash screen (already visible by default) waits for Connect click
-}
-
-document.getElementById('connect-btn').addEventListener('click', ()=>{
-  runHackSequence(()=> enterTablet());
-});
 
 async function enterTablet(){
-  hideLockout();
-  document.getElementById('splash-screen').classList.add('hidden-el');
-  document.getElementById('tablet-app').classList.add('visible');
+  document.getElementById('hack-screen').classList.add('hidden-el');
+  document.getElementById('lockout-screen').classList.add('hidden-el');
+  document.getElementById('tablet-app').classList.remove('hidden-el');
   await loadSettings();
   applyMapImage();
   await loadMissions();
   subscribeMissionsRealtime();
   document.getElementById('hidden-admin-btn').classList.remove('hidden-el');
-  updateAdminBadge();
 }
 
 function applyMapImage(){
   resetZoom();
   const img = document.getElementById('map-image');
   const placeholder = document.getElementById('map-placeholder');
-  const url = state.settings.map_image_url || DEFAULT_MAP_URL;
-  if(url){
-    img.onerror = ()=>{
-      img.classList.add('hidden-el');
-      placeholder.classList.remove('hidden-el');
-      renderPins();
-    };
-    img.onload = ()=>{ renderPins(); };
-    img.src = url;
-    img.classList.remove('hidden-el');
-    placeholder.classList.add('hidden-el');
-  } else {
+  const url = (state.settings && state.settings.map_image_url) || DEFAULT_MAP_URL;
+  if(!url){
     img.classList.add('hidden-el');
     placeholder.classList.remove('hidden-el');
-    renderPins();
+    return;
   }
+  img.onload = ()=>{
+    img.classList.remove('hidden-el');
+    placeholder.classList.add('hidden-el');
+  };
+  img.onerror = ()=>{
+    img.classList.add('hidden-el');
+    placeholder.classList.remove('hidden-el');
+  };
+  img.src = url;
 }
 
 /* ============================================================================
-   REALTIME
+   LOCKOUT / SELF-DESTRUCT
    ========================================================================== */
+function showLockout(){
+  document.getElementById('splash-screen').classList.add('hidden-el');
+  document.getElementById('hack-screen').classList.add('hidden-el');
+  document.getElementById('tablet-app').classList.add('hidden-el');
+  document.getElementById('lockout-screen').classList.remove('hidden-el');
+  const msg = (state.settings && state.settings.self_destruct_message) || '';
+  document.getElementById('lockout-msg').textContent = msg;
+}
+function hideLockout(){
+  document.getElementById('lockout-screen').classList.add('hidden-el');
+  if(document.getElementById('tablet-app').classList.contains('hidden-el') &&
+     document.getElementById('splash-screen').classList.contains('hidden-el') &&
+     document.getElementById('hack-screen').classList.contains('hidden-el')){
+    enterTablet();
+  } else if(!document.getElementById('tablet-app').classList.contains('hidden-el')) {
+    applyMapImage();
+  }
+}
+
 function subscribeSettingsRealtime(){
   if(state.settingsChannel) sb.removeChannel(state.settingsChannel);
-  state.settingsChannel = sb.channel('app-settings-watch')
-    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'app_settings' }, (payload)=>{
-      state.settings = payload.new;
-      if(state.settings.self_destruct && !state.isAdmin){
+  state.settingsChannel = sb.channel('settings-watch')
+    .on('postgres_changes', { event:'*', schema:'public', table:'app_settings' }, async ()=>{
+      await loadSettings();
+      if(state.settings && state.settings.self_destruct){
         showLockout();
-      } else if(!state.settings.self_destruct){
-        hideLockout();
-        if(document.getElementById('tablet-app').classList.contains('visible')) applyMapImage();
+      } else {
+        if(!document.getElementById('lockout-screen').classList.contains('hidden-el')){
+          hideLockout();
+        } else if(!document.getElementById('tablet-app').classList.contains('hidden-el')){
+          applyMapImage();
+        }
       }
-      if(document.getElementById('admin-panel-modal').classList.contains('visible')) renderKillswitchTab();
     })
     .subscribe();
 }
+
 function subscribeMissionsRealtime(){
   if(state.missionsChannel) sb.removeChannel(state.missionsChannel);
   state.missionsChannel = sb.channel('missions-watch')
@@ -746,13 +679,37 @@ function subscribeMissionsRealtime(){
 }
 
 /* ============================================================================
-   MISSIONS — load / render / pins / detail panel
+   MISSIONS — load / render / pins / detail panel / index
    ========================================================================== */
 async function loadMissions(){
   const { data, error } = await sb.from('missions').select('*').order('created_at', { ascending:true });
   if(!error) state.missions = data || [];
   renderPins();
   renderMissionIndex();
+}
+
+function renderPins(){
+  const layer = document.getElementById('pins-layer');
+  layer.innerHTML = '';
+  state.missions.forEach(m=>{
+    if(m.is_hidden && !state.isAdmin) return; // never rendered for non-admins, period
+
+    const isLocked = !!m.lock_code && !state.isAdmin && !state.unlockedMissionIds.has(m.id);
+    if(isLocked) return; // locked blips are fully invisible on the map until unlocked with the correct code
+
+    const classes = [
+      'mission-pin', 'status-' + m.status,
+      m.id === state.selectedMissionId ? 'selected' : '',
+      (m.is_hidden && state.isAdmin) ? 'pin-hidden-admin' : '',
+    ].filter(Boolean).join(' ');
+    const pin = el(`<div class="${classes}" style="left:${m.x}%; top:${m.y}%;" title="${escapeHtml(m.title)}">${m.icon || '🎯'}</div>`);
+    pin.onclick = (e)=>{
+      e.stopPropagation();
+      if(state.mapDragMoved) return;
+      selectMission(m.id);
+    };
+    layer.appendChild(pin);
+  });
 }
 
 function renderMissionIndex(){
@@ -795,31 +752,6 @@ function centerOnMission(m){
   wrap.scrollTop = targetY - wrap.clientHeight / 2;
 }
 
-function renderPins(){
-  const layer = document.getElementById('pins-layer');
-  layer.innerHTML = '';
-  state.missions.forEach(m=>{
-    if(m.is_hidden && !state.isAdmin) return; // never rendered for non-admins, period
-
-    const isLocked = !!m.lock_code && !state.isAdmin && !state.unlockedMissionIds.has(m.id);
-    const displayIcon = isLocked ? '🔒' : (m.icon || '🎯');
-    const classes = [
-      'mission-pin', 'status-' + m.status,
-      m.id === state.selectedMissionId ? 'selected' : '',
-      isLocked ? 'locked' : '',
-      (m.is_hidden && state.isAdmin) ? 'pin-hidden-admin' : '',
-    ].filter(Boolean).join(' ');
-    const pin = el(`<div class="${classes}" style="left:${m.x}%; top:${m.y}%;" title="${isLocked ? 'Locked transmission' : escapeHtml(m.title)}">${displayIcon}</div>`);
-    pin.onclick = (e)=>{
-      e.stopPropagation();
-      if(state.mapDragMoved) return;
-      if(isLocked){ openUnlockPrompt(m); return; }
-      selectMission(m.id);
-    };
-    layer.appendChild(pin);
-  });
-}
-
 function selectMission(id){
   state.selectedMissionId = id;
   renderPins();
@@ -847,32 +779,29 @@ function renderDetailPanel(){
       <span class="badge risk-${m.risk}">${riskIcon(m.risk)} ${riskLabel(m.risk)} risk</span>
       <span class="badge status-${m.status}">${statusIcon(m.status)} ${statusLabel(m.status)}</span>
     </div>
-    <div class="desc-label">Briefing</div>
-    <div class="desc">${escapeHtml(m.description) || '—'}</div>
-    ${m.reward ? `<div class="reward"><b>Reward:</b> ${escapeHtml(m.reward)}</div>` : ''}
-    <div class="admin-row" id="detail-admin-row"></div>
+    <div class="desc">${escapeHtml(m.description || 'No further details provided.')}</div>
+    ${m.reward ? `<div class="reward">💰 Reward: ${escapeHtml(m.reward)}</div>` : ''}
+    ${state.isAdmin ? `<div class="modal-actions" style="justify-content:flex-start; margin-top:22px;">
+      <button class="btn secondary small" id="detail-edit-btn">Edit</button>
+      <button class="btn danger small" id="detail-delete-btn">Delete</button>
+    </div>` : ''}
   `;
   document.getElementById('detail-close-btn').onclick = closeDetailPanel;
-  const adminRow = document.getElementById('detail-admin-row');
   if(state.isAdmin){
-    const editBtn = el(`<button class="btn secondary small">Edit</button>`);
-    editBtn.onclick = ()=> openMissionForm(m);
-    const delBtn = el(`<button class="btn danger small">Delete</button>`);
-    delBtn.onclick = ()=> deleteMission(m);
-    adminRow.appendChild(editBtn);
-    adminRow.appendChild(delBtn);
+    const editBtn = document.getElementById('detail-edit-btn');
+    if(editBtn) editBtn.onclick = ()=> openMissionForm(m);
+    const delBtn = document.getElementById('detail-delete-btn');
+    if(delBtn) delBtn.onclick = ()=> deleteMission(m);
   }
 }
 
-/* ---- drag-to-pan the map (hold left OR right click) ---- */
+/* ============================================================================
+   MAP DRAG-TO-PAN
+   ========================================================================== */
 (function enableMapPan(){
   const wrap = document.getElementById('map-wrap');
-  let dragging = false;
-  let startX = 0, startY = 0, startScrollLeft = 0, startScrollTop = 0;
-  const THRESHOLD = 4;
-
+  let dragging = false, startX = 0, startY = 0, startScrollLeft = 0, startScrollTop = 0;
   wrap.addEventListener('contextmenu', (e)=> e.preventDefault());
-
   wrap.addEventListener('mousedown', (e)=>{
     if(e.button !== 0 && e.button !== 2) return;
     dragging = true;
@@ -880,118 +809,95 @@ function renderDetailPanel(){
     startX = e.clientX; startY = e.clientY;
     startScrollLeft = wrap.scrollLeft; startScrollTop = wrap.scrollTop;
     wrap.classList.add('dragging');
-    e.preventDefault();
   });
-
   window.addEventListener('mousemove', (e)=>{
     if(!dragging) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    if(Math.abs(dx) > THRESHOLD || Math.abs(dy) > THRESHOLD) state.mapDragMoved = true;
+    const dx = e.clientX - startX, dy = e.clientY - startY;
+    if(Math.abs(dx) > 4 || Math.abs(dy) > 4) state.mapDragMoved = true;
     wrap.scrollLeft = startScrollLeft - dx;
     wrap.scrollTop = startScrollTop - dy;
   });
-
   window.addEventListener('mouseup', ()=>{
     if(!dragging) return;
     dragging = false;
     wrap.classList.remove('dragging');
+    setTimeout(()=>{ state.mapDragMoved = false; }, 50);
+  });
+  wrap.addEventListener('click', (e)=>{
+    if(state.mapDragMoved){ e.stopPropagation(); return; }
+    if(state.placeMode && e.target.id === 'map-container' || (state.placeMode && e.target.id === 'map-image')){
+      const container = document.getElementById('map-container');
+      const rect = container.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      state.pendingCoords = { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) };
+      state.placeMode = false;
+      document.getElementById('place-hint').classList.add('hidden-el');
+      openMissionForm(null, state.pendingCoords);
+    } else if(!state.placeMode) {
+      closeDetailPanel();
+    }
   });
 })();
 
-/* ---- scroll-wheel zoom (toward cursor) ---- */
+/* ============================================================================
+   ZOOM (scroll wheel, zoom-in only, floor at 100%)
+   ========================================================================== */
 const MIN_ZOOM = 1, MAX_ZOOM = 4, ZOOM_STEP = 0.15;
-
 function updateZoomIndicator(){
   document.getElementById('zoom-indicator').textContent = '🔍 ' + Math.round(state.mapZoom * 100) + '%';
 }
-
 function resetZoom(){
   state.mapZoom = 1;
   const container = document.getElementById('map-container');
   container.style.width = '100%';
-  document.getElementById('map-wrap').scrollLeft = 0;
-  document.getElementById('map-wrap').scrollTop = 0;
+  const wrap = document.getElementById('map-wrap');
+  wrap.scrollLeft = 0;
+  wrap.scrollTop = 0;
   updateZoomIndicator();
 }
-
 function applyZoom(newZoom, cursorX, cursorY){
-  const wrap = document.getElementById('map-wrap');
-  const container = document.getElementById('map-container');
   newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
   if(newZoom === state.mapZoom) return;
-
-  const wrapRect = wrap.getBoundingClientRect();
-  const oldRect = container.getBoundingClientRect();
-  const cursorXInWrap = cursorX - wrapRect.left;
-  const cursorYInWrap = cursorY - wrapRect.top;
-  const fractionX = oldRect.width > 0 ? (wrap.scrollLeft + cursorXInWrap) / oldRect.width : 0.5;
-  const fractionY = oldRect.height > 0 ? (wrap.scrollTop + cursorYInWrap) / oldRect.height : 0.5;
-
+  const wrap = document.getElementById('map-wrap');
+  const container = document.getElementById('map-container');
+  const rect = wrap.getBoundingClientRect();
+  const oldWidth = container.offsetWidth;
+  const fracX = (wrap.scrollLeft + (cursorX - rect.left)) / oldWidth;
+  const fracY = (wrap.scrollTop + (cursorY - rect.top)) / container.offsetHeight;
   state.mapZoom = newZoom;
   container.style.width = (state.mapZoom * 100) + '%';
-
-  const newRect = container.getBoundingClientRect();
-  wrap.scrollLeft = fractionX * newRect.width - cursorXInWrap;
-  wrap.scrollTop = fractionY * newRect.height - cursorYInWrap;
+  const newWidth = container.offsetWidth;
+  wrap.scrollLeft = fracX * newWidth - (cursorX - rect.left);
+  wrap.scrollTop = fracY * container.offsetHeight - (cursorY - rect.top);
   updateZoomIndicator();
 }
-
 document.getElementById('map-wrap').addEventListener('wheel', (e)=>{
   e.preventDefault();
   const direction = e.deltaY > 0 ? -1 : 1;
   applyZoom(state.mapZoom + direction * ZOOM_STEP, e.clientX, e.clientY);
 }, { passive:false });
-
 document.getElementById('zoom-indicator').addEventListener('click', resetZoom);
 
-/* map click → placement mode */
-document.getElementById('pins-layer').addEventListener('click', (e)=>{
-  if(state.mapDragMoved) return;
-  if(!state.placeMode) return;
-  const container = document.getElementById('map-container');
-  const rect = container.getBoundingClientRect();
-  const xPct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-  const yPct = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-  setPlaceMode(false);
-  openMissionForm(null, xPct, yPct);
-});
-function setPlaceMode(on){
-  state.placeMode = on;
-  document.getElementById('pins-layer').classList.toggle('place-mode', on);
-  document.getElementById('place-hint').classList.toggle('hidden-el', !on);
-}
-
 /* ============================================================================
-   MISSION FORM (create/edit)
+   MISSION FORM (admin)
    ========================================================================== */
-function renderIconPicker(){
-  const wrap = document.getElementById('mf-icon-pick');
-  wrap.innerHTML = '';
-  ICONS.forEach(ic=>{
-    const b = el(`<button type="button" class="${ic===state.selectedIcon?'active':''}">${ic}</button>`);
-    b.onclick = ()=>{ state.selectedIcon = ic; renderIconPicker(); };
-    wrap.appendChild(b);
-  });
-}
-
-function openMissionForm(mission, x, y){
+function openMissionForm(mission, coords){
   state.editingMissionId = mission ? mission.id : null;
-  state.pendingCoords = mission ? { x: mission.x, y: mission.y } : { x, y };
-  state.selectedIcon = mission ? (mission.icon || ICONS[0]) : ICONS[0];
-
   document.getElementById('mission-form-title').textContent = mission ? 'Edit Mission' : 'New Mission';
   document.getElementById('mf-title').value = mission ? mission.title : '';
-  document.getElementById('mf-giver').value = mission ? mission.giver : 'Sovereign';
-  document.getElementById('mf-description').value = mission ? mission.description : '';
-  document.getElementById('mf-reward').value = mission ? mission.reward : '';
+  document.getElementById('mf-giver').value = mission ? (mission.giver || 'Sovereign') : 'Sovereign';
+  document.getElementById('mf-description').value = mission ? (mission.description || '') : '';
+  document.getElementById('mf-reward').value = mission ? (mission.reward || '') : '';
   document.getElementById('mf-risk').value = mission ? mission.risk : 'medium';
   document.getElementById('mf-status').value = mission ? mission.status : 'open';
+  document.getElementById('mf-icon').value = mission ? (mission.icon || '🎯') : '🎯';
   document.getElementById('mf-lock-code').value = mission ? (mission.lock_code || '') : '';
   document.getElementById('mf-hidden').checked = mission ? !!mission.is_hidden : false;
-  document.getElementById('mf-error').textContent = '';
-  document.getElementById('mf-delete-btn').classList.toggle('hidden-el', !mission);
-  renderIconPicker();
+  document.getElementById('mission-form-error').textContent = '';
+  document.getElementById('mission-form-delete-btn').classList.toggle('hidden-el', !mission);
+  if(mission){ state.pendingCoords = { x: mission.x, y: mission.y }; }
+  else if(coords){ state.pendingCoords = coords; }
   document.getElementById('mission-form-modal').classList.add('visible');
 }
 function closeMissionForm(){
@@ -999,15 +905,11 @@ function closeMissionForm(){
   state.editingMissionId = null;
   state.pendingCoords = null;
 }
-document.getElementById('mf-cancel-btn').addEventListener('click', closeMissionForm);
-
-document.getElementById('mf-save-btn').addEventListener('click', async ()=>{
-  const errEl = document.getElementById('mf-error');
-  errEl.textContent = '';
+document.getElementById('mission-form-cancel-btn').addEventListener('click', closeMissionForm);
+document.getElementById('mission-form-save-btn').addEventListener('click', async ()=>{
   const title = document.getElementById('mf-title').value.trim();
-  if(!title){ errEl.textContent = 'Title is required.'; return; }
-  if(!state.pendingCoords){ errEl.textContent = 'Missing map coordinates.'; return; }
-
+  if(!title){ document.getElementById('mission-form-error').textContent = 'Title is required.'; return; }
+  if(!state.pendingCoords){ document.getElementById('mission-form-error').textContent = 'Missing map position.'; return; }
   const payload = {
     title,
     giver: document.getElementById('mf-giver').value.trim() || 'Sovereign',
@@ -1015,28 +917,25 @@ document.getElementById('mf-save-btn').addEventListener('click', async ()=>{
     reward: document.getElementById('mf-reward').value.trim(),
     risk: document.getElementById('mf-risk').value,
     status: document.getElementById('mf-status').value,
-    icon: state.selectedIcon,
+    icon: document.getElementById('mf-icon').value.trim() || '🎯',
     x: state.pendingCoords.x,
     y: state.pendingCoords.y,
     lock_code: document.getElementById('mf-lock-code').value.trim() || null,
     is_hidden: document.getElementById('mf-hidden').checked,
     updated_at: new Date().toISOString(),
   };
-
   let error;
   if(state.editingMissionId){
     ({ error } = await sb.from('missions').update(payload).eq('id', state.editingMissionId));
   } else {
     ({ error } = await sb.from('missions').insert(payload));
   }
-  if(error){ errEl.textContent = 'ERROR: ' + error.message; return; }
-
+  if(error){ document.getElementById('mission-form-error').textContent = error.message; return; }
   closeMissionForm();
   await loadMissions();
   renderAdminMissionList();
 });
-
-document.getElementById('mf-delete-btn').addEventListener('click', ()=>{
+document.getElementById('mission-form-delete-btn').addEventListener('click', ()=>{
   const mission = state.missions.find(m=>m.id === state.editingMissionId);
   if(!mission) return;
   closeMissionForm();
@@ -1084,6 +983,7 @@ document.getElementById('unlock-submit-btn').addEventListener('click', ()=>{
   document.getElementById('unlock-modal').classList.remove('visible');
   pendingUnlockMission = null;
   renderPins();
+  renderMissionIndex();
   selectMission(unlocked.id);
   centerOnMission(unlocked);
 });
@@ -1098,155 +998,156 @@ function openAdminLoginModal(){
 }
 document.getElementById('hidden-admin-btn').addEventListener('click', openAdminLoginModal);
 document.getElementById('lockout-admin-btn').addEventListener('click', openAdminLoginModal);
-
-document.getElementById('admin-login-cancel').addEventListener('click', ()=>{
+document.getElementById('admin-login-cancel-btn').addEventListener('click', ()=>{
   document.getElementById('admin-login-modal').classList.remove('visible');
 });
 document.getElementById('admin-login-password').addEventListener('keydown', (e)=>{
   if(e.key === 'Enter') document.getElementById('admin-login-submit').click();
 });
 document.getElementById('admin-login-submit').addEventListener('click', async ()=>{
-  const pw = document.getElementById('admin-login-password').value;
+  const password = document.getElementById('admin-login-password').value;
   const errEl = document.getElementById('admin-login-error');
-  if(!pw){ errEl.textContent = 'Enter the cipher.'; return; }
-  const { data, error } = await sb.auth.signInWithPassword({ email: ADMIN_EMAIL, password: pw });
+  errEl.textContent = '';
+  const { data, error } = await sb.auth.signInWithPassword({ email: ADMIN_EMAIL, password });
   if(error){ errEl.textContent = 'ACCESS DENIED — ' + error.message + (error.status ? ' (status ' + error.status + ')' : ''); return; }
   state.session = data.session;
   state.isAdmin = true;
   document.getElementById('admin-login-modal').classList.remove('visible');
-  updateAdminBadge();
-  if(state.selectedMissionId) renderDetailPanel();
-  hideLockout();
-  if(!document.getElementById('tablet-app').classList.contains('visible')){
-    await enterTablet();
+  document.getElementById('hidden-admin-btn').classList.add('hidden-el');
+  document.getElementById('admin-badge').classList.remove('hidden-el');
+  if(!document.getElementById('lockout-screen').classList.contains('hidden-el')){
+    // stay on lockout screen but admin is now authenticated; panel accessible
   }
+  renderPins();
+  renderMissionIndex();
+  if(state.selectedMissionId) renderDetailPanel();
 });
 
-function updateAdminBadge(){
-  document.getElementById('admin-badge').classList.toggle('hidden-el', !state.isAdmin);
-}
-
 document.getElementById('admin-logout-btn').addEventListener('click', async ()=>{
-  await sb.auth.signOut();
-  state.session = null;
+  await sb.auth.signOut().catch(()=>{});
   state.isAdmin = false;
-  updateAdminBadge();
+  state.session = null;
+  document.getElementById('admin-badge').classList.add('hidden-el');
+  document.getElementById('hidden-admin-btn').classList.remove('hidden-el');
+  renderPins();
+  renderMissionIndex();
+  closeDetailPanel();
+});
+
+document.getElementById('open-admin-panel-btn').addEventListener('click', ()=>{
+  openAdminPanel();
+});
+document.getElementById('admin-panel-close-btn').addEventListener('click', ()=>{
   document.getElementById('admin-panel-modal').classList.remove('visible');
-  if(state.selectedMissionId) renderDetailPanel();
 });
 
 /* ============================================================================
    ADMIN PANEL
    ========================================================================== */
-document.getElementById('open-admin-panel-btn').addEventListener('click', ()=>{
+function openAdminPanel(){
   document.getElementById('admin-panel-modal').classList.add('visible');
   renderAdminMissionList();
   renderKillswitchTab();
-  document.getElementById('map-upload-error').textContent = '';
-});
-document.getElementById('admin-panel-close-btn').addEventListener('click', ()=>{
-  document.getElementById('admin-panel-modal').classList.remove('visible');
-  setPlaceMode(false);
-});
-
-document.querySelectorAll('.admin-tab').forEach(tab=>{
-  tab.addEventListener('click', ()=>{
-    document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.admin-tab-panel').forEach(p=>p.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('admin-tab-'+tab.dataset.tab).classList.add('active');
+}
+document.querySelectorAll('#admin-panel-modal .tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#admin-panel-modal .tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.admin-tab').forEach(t=>t.classList.add('hidden-el'));
+    document.getElementById('admin-tab-' + btn.dataset.tab).classList.remove('hidden-el');
   });
 });
 
 document.getElementById('admin-place-mission-btn').addEventListener('click', ()=>{
   document.getElementById('admin-panel-modal').classList.remove('visible');
-  setPlaceMode(true);
+  state.placeMode = true;
+  document.getElementById('place-hint').classList.remove('hidden-el');
 });
 
-function renderAdminMissionList(){
-  const wrap = document.getElementById('admin-mission-list');
-  const filter = document.getElementById('admin-mission-filter').value;
-  wrap.innerHTML = '';
-  const filtered = state.missions.filter(m => filter === 'all' || m.status === filter).slice().reverse();
-  if(filtered.length === 0){
-    wrap.appendChild(el(`<div style="color:var(--dim); font-size:12px;">No missions ${filter === 'all' ? 'placed yet' : 'with this status'}.</div>`));
-    return;
-  }
-  filtered.forEach(m=>{
-    const item = el(`<div class="mission-list-item">
-      <div class="ic">${m.icon || '🎯'}</div>
-      <div class="info">
-        <div class="t">${escapeHtml(m.title)}${m.is_hidden ? ' <span style="color:var(--dim);font-size:10px;">(HIDDEN)</span>' : ''}${m.lock_code ? ' <span style="color:var(--accent2);font-size:10px;">🔒 LOCKED</span>' : ''}</div>
-        <div class="m">${escapeHtml(m.giver || 'Sovereign')} · ${riskIcon(m.risk)} ${riskLabel(m.risk)} · <span class="badge status-${m.status}" style="margin:0;">${statusIcon(m.status)} ${statusLabel(m.status)}</span></div>
-      </div>
-      <div class="acts"></div>
-    </div>`);
-    const acts = item.querySelector('.acts');
-    const editBtn = el(`<button class="btn secondary small">Edit</button>`);
-    editBtn.onclick = ()=> openMissionForm(m);
-    const delBtn = el(`<button class="btn danger small">Del</button>`);
-    delBtn.onclick = ()=> deleteMission(m);
-    acts.appendChild(editBtn); acts.appendChild(delBtn);
-    wrap.appendChild(item);
-  });
-}
 document.getElementById('admin-mission-filter').addEventListener('change', renderAdminMissionList);
 
-/* ---- map upload ---- */
-document.getElementById('map-upload-input').addEventListener('change', async (e)=>{
-  const file = e.target.files && e.target.files[0];
+function renderAdminMissionList(){
+  const listEl = document.getElementById('admin-mission-list');
+  const filter = document.getElementById('admin-mission-filter').value;
+  listEl.innerHTML = '';
+  let missions = state.missions.slice().reverse();
+  if(filter !== 'all') missions = missions.filter(m=>m.status === filter);
+  if(missions.length === 0){
+    listEl.appendChild(el(`<div style="color:var(--dim); font-size:12px; padding:10px;">No missions found.</div>`));
+    return;
+  }
+  missions.forEach(m=>{
+    const row = el(`<div class="admin-mission-row">
+      <span>${m.icon || '🎯'}</span>
+      <span class="title">${escapeHtml(m.title)}</span>
+      <div class="tags">
+        <span class="tag">${statusLabel(m.status)}</span>
+        ${m.is_hidden ? '<span class="tag">HIDDEN</span>' : ''}
+        ${m.lock_code ? '<span class="tag">🔒 LOCKED</span>' : ''}
+      </div>
+      <button class="btn secondary small">Edit</button>
+    </div>`);
+    row.querySelector('button').onclick = ()=>{
+      document.getElementById('admin-panel-modal').classList.remove('visible');
+      openMissionForm(m);
+    };
+    listEl.appendChild(row);
+  });
+}
+
+document.getElementById('admin-map-upload').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
   if(!file) return;
-  const errEl = document.getElementById('map-upload-error');
-  errEl.textContent = '';
-  if(file.size > 12*1024*1024){ errEl.textContent = 'Image too large (max 12MB).'; return; }
-
-  const preview = document.getElementById('map-upload-preview');
-  preview.src = URL.createObjectURL(file);
-  preview.style.display = 'block';
-
-  const path = `map-${Date.now()}.${(file.name.split('.').pop()||'png')}`;
-  const { error: upErr } = await sb.storage.from('mission-map').upload(path, file, { upsert:false });
-  if(upErr){ errEl.textContent = 'ERROR: ' + upErr.message; return; }
-  const { data: pub } = sb.storage.from('mission-map').getPublicUrl(path);
-
-  const { error: updErr } = await sb.from('app_settings').update({ map_image_url: pub.publicUrl, updated_at: new Date().toISOString() }).eq('id', 1);
-  if(updErr){ errEl.textContent = 'ERROR: ' + updErr.message; return; }
-
-  state.settings.map_image_url = pub.publicUrl;
+  const errEl = document.getElementById('admin-map-error');
+  errEl.textContent = 'Uploading...';
+  const path = `map-${Date.now()}-${file.name}`;
+  const { error: uploadError } = await sb.storage.from('mission-map').upload(path, file, { upsert:true });
+  if(uploadError){ errEl.textContent = 'ERROR: ' + uploadError.message; return; }
+  const { data: urlData } = sb.storage.from('mission-map').getPublicUrl(path);
+  const { error: updateError } = await sb.from('app_settings').update({
+    map_image_url: urlData.publicUrl, updated_at: new Date().toISOString()
+  }).eq('id', 1);
+  if(updateError){ errEl.textContent = 'ERROR: ' + updateError.message; return; }
+  errEl.textContent = 'Map updated.';
+  await loadSettings();
   applyMapImage();
 });
 
-/* ---- self-destruct ---- */
 function renderKillswitchTab(){
-  const label = document.getElementById('sd-status-label');
-  const btn = document.getElementById('self-destruct-btn');
-  if(state.settings.self_destruct){
-    label.textContent = '● NETWORK SEVERED';
-    label.className = 'sd-status on';
-    btn.textContent = 'Re-Enable Network';
-  } else {
-    label.textContent = '● NETWORK OPERATIONAL';
-    label.className = 'sd-status off';
-    btn.textContent = 'Self-Destruct — Sever Network';
-  }
+  const content = document.getElementById('admin-killswitch-content');
+  const active = state.settings && state.settings.self_destruct;
+  content.innerHTML = `
+    <p style="font-size:12.5px; color:var(--dim); line-height:1.6; margin-bottom:18px;">
+      ${active
+        ? 'The network is currently LOCKED DOWN. All non-admin users see the compromised-network screen. Disable it below to restore access.'
+        : 'Triggering self-destruct locks out all non-admin users behind a compromised-network screen until an admin disables it here.'}
+    </p>
+    <button class="btn ${active ? 'secondary' : 'danger'}" id="self-destruct-btn">
+      ${active ? 'Restore Network Access' : 'Trigger Self-Destruct'}
+    </button>
+  `;
+  document.getElementById('self-destruct-btn').addEventListener('click', ()=>{
+    showConfirm(
+      active ? 'Restore network access for all users?' : 'Lock out the entire network until an admin restores it?',
+      async ()=>{
+        const { error } = await sb.from('app_settings').update({
+          self_destruct: !active, updated_at: new Date().toISOString()
+        }).eq('id', 1);
+        if(error){ showAlert('ERROR: ' + error.message, true); return; }
+        await loadSettings();
+        renderKillswitchTab();
+        if(state.settings.self_destruct) showLockout();
+        else if(!document.getElementById('lockout-screen').classList.contains('hidden-el')) hideLockout();
+      },
+      { title: active ? 'Restore Access' : 'Self-Destruct' }
+    );
+  });
 }
-document.getElementById('self-destruct-btn').addEventListener('click', ()=>{
-  const turningOn = !state.settings.self_destruct;
-  const msg = turningOn
-    ? 'This will immediately lock every non-admin operative out of the tablet. Only admins will be able to reconnect and undo this. Proceed?'
-    : 'Re-open the network to all operatives?';
-  showConfirm(msg, async ()=>{
-    const { error } = await sb.from('app_settings').update({ self_destruct: turningOn, updated_at: new Date().toISOString() }).eq('id', 1);
-    if(error){ showAlert('ERROR: ' + error.message, true); return; }
-    state.settings.self_destruct = turningOn;
-    renderKillswitchTab();
-  }, { title: turningOn ? 'Confirm Self-Destruct' : 'Confirm Re-Enable' });
-});
 
 /* ============================================================================
-   BOOTSTRAP
+   INIT
    ========================================================================== */
-window.addEventListener('load', boot);
+boot();
 </script>
 </body>
 </html>
