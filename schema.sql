@@ -131,57 +131,41 @@ create policy "mission-map admin delete" on storage.objects
   for delete using (bucket_id = 'mission-map' and auth.role() = 'authenticated');
 
 -- ---------------------------------------------------------------------------
--- 3. Seed / force-reset the single admin account
+-- 3. Admin account — create this through the Supabase Dashboard, NOT SQL
 --
--- Email is fixed/synthetic (never shown in the UI — the admin login only
--- asks for a password).
+-- Earlier versions of this script tried to insert/update the admin account
+-- directly in auth.users via raw SQL (crypt()/gen_salt()). That turned out
+-- to be unreliable — the password hash it wrote didn't verify correctly
+-- against this project's Auth service ("Invalid login credentials" even
+-- with the right password). Writing straight into auth.users bypasses
+-- Supabase's own password-hashing path, so don't do it that way.
 --
--- Password: raptor
+-- Instead, create the account through the Dashboard, which goes through
+-- the real Auth API and is guaranteed to work:
 --
--- This block is UNCONDITIONAL about the password: whether the account
--- already exists (from an earlier run) or not, running this script always
--- leaves the password set to "raptor". No more "only sets it on first
--- creation" gotcha.
+--   1. Authentication > Users > "Add user" > "Create new user"
+--        Email:    sovereign-ops@tablet.local
+--        Password: raptor
+--        ✅ Auto Confirm User (must be checked, or password login won't work)
+--   2. Save.
+--
+-- (We switched the fixed email from sovereign-admin@tablet.local to
+-- sovereign-ops@tablet.local — the first one got created with a broken
+-- password via the old SQL approach and couldn't be deleted, so rather than
+-- fight that, the app now points at a fresh email instead. The old broken
+-- account is harmless to leave sitting there — its password doesn't work
+-- for anyone, including you.)
+--
+-- That's it — no SQL needed for this step. The app only ever asks for the
+-- password (via the hidden corner button); the email is fixed in the code
+-- and never shown in the UI.
 -- ---------------------------------------------------------------------------
-do $$
-declare
-  admin_id uuid;
-begin
-  select id into admin_id from auth.users where email = 'sovereign-admin@tablet.local';
-
-  if admin_id is null then
-    admin_id := gen_random_uuid();
-    insert into auth.users (
-      id, instance_id, aud, role, email, encrypted_password,
-      email_confirmed_at, created_at, updated_at,
-      raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token
-    ) values (
-      admin_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-      'sovereign-admin@tablet.local', crypt('raptor', gen_salt('bf')),
-      now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}', '', ''
-    );
-    insert into auth.identities (
-      id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
-    ) values (
-      gen_random_uuid(), admin_id, admin_id::text,
-      jsonb_build_object('sub', admin_id::text, 'email', 'sovereign-admin@tablet.local'),
-      'email', now(), now(), now()
-    );
-  else
-    update auth.users
-    set encrypted_password = crypt('raptor', gen_salt('bf')),
-        email_confirmed_at = coalesce(email_confirmed_at, now()),
-        updated_at = now()
-    where id = admin_id;
-  end if;
-end $$;
 
 -- ============================================================================
 -- Done. Sanity check:
 --   select * from public.app_settings;
 --   select * from public.missions;
---   select email, updated_at from auth.users where email = 'sovereign-admin@tablet.local';
 --
--- Password is guaranteed to be "raptor" after this script runs, every time,
--- whether the account is new or already existed.
+-- Don't forget step 3 above (create the admin account via the Dashboard,
+-- not SQL) — this script no longer touches auth.users at all.
 -- ============================================================================
