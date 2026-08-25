@@ -3,1710 +3,897 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>SECURE ACCESS TERMINAL</title>
+<title>SOVEREIGN // MISSION UPLINK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   :root{
-    --bg:#060909;
-    --panel:#0e1516;
-    --panel2:#121b1c;
-    --border:#1d2b2c;
-    --accent:#00ff9c;
-    --accent2:#39d0ff;
-    --text:#d7ffe9;
-    --dim:#6b8b82;
-    --danger:#ff4d6d;
-    --warn:#ffcc4d;
-    font-family: 'Consolas','Menlo','Courier New',monospace;
+    --bg:#050302; --bg2:#0c0704; --panel:#120b07; --panel2:#180f09; --border:#3a2211;
+    --accent:#ff6a1a; --accent2:#ffb347; --accent-dim:#7a3d14;
+    --text:#ffe6cf; --dim:#9c7454;
+    --danger:#ff3b3b; --ok:#4caf7a; --warn:#ffd23b; --extreme:#e63bff;
+    font-family:'Share Tech Mono', monospace;
   }
   *{box-sizing:border-box;}
-  html,body{
-    margin:0; padding:0; height:100%;
-    background:var(--bg); color:var(--text);
-    font-family: 'Consolas','Menlo','Courier New',monospace;
-    overflow:hidden;
-  }
-  ::selection{ background:var(--accent); color:#001b12; }
+  html,body{ margin:0; padding:0; height:100%; background:var(--bg); color:var(--text); overflow:hidden; font-family:'Share Tech Mono', monospace; }
+  ::selection{ background:var(--accent); color:#160900; }
   ::-webkit-scrollbar{ width:8px; }
   ::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
   ::-webkit-scrollbar-track{ background:transparent; }
-
-  #matrix-canvas{
-    position:fixed; inset:0; width:100%; height:100%; z-index:0; opacity:0.35;
-  }
-
-  /* ---------------- LANG TOGGLE ---------------- */
-  .lang-toggle{
-    position:fixed; top:14px; right:14px; z-index:30;
-    display:flex; border:1px solid var(--border); border-radius:4px; overflow:hidden;
-    background:rgba(10,15,15,0.8);
-  }
-  .lang-toggle button{
-    background:transparent; border:none; color:var(--dim); font-family:inherit; font-size:11px;
-    padding:6px 10px; cursor:pointer; letter-spacing:1px;
-  }
-  .lang-toggle button.active{ background:var(--accent); color:#03130b; font-weight:bold; }
-
-  /* ---------------- BOOT / LOADER ---------------- */
-  #boot-screen{
-    position:fixed; inset:0; z-index:20;
-    display:flex; align-items:center; justify-content:center;
-    background:radial-gradient(ellipse at center, rgba(0,20,10,0.4), var(--bg) 75%);
-    transition:opacity .6s ease;
-  }
-  #boot-screen.hidden{ opacity:0; pointer-events:none; }
-  #boot-term{
-    width:min(640px, 90vw);
-    border:1px solid var(--border);
-    background:rgba(6,10,10,0.85);
-    padding:22px 24px;
-    box-shadow:0 0 40px rgba(0,255,156,0.08), inset 0 0 40px rgba(0,255,156,0.03);
-  }
-  #boot-term .line{
-    color:var(--accent); font-size:14px; line-height:1.9; white-space:pre-wrap;
-    text-shadow:0 0 6px rgba(0,255,156,0.5);
-  }
-  #boot-term .line.dim{ color:var(--dim); text-shadow:none; }
-  #boot-progress{
-    margin-top:14px; height:4px; width:100%; background:var(--border); overflow:hidden;
-  }
-  #boot-progress > div{ height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .25s linear; }
-
-  /* ---------------- LOGIN ---------------- */
-  #login-screen{
-    position:fixed; inset:0; z-index:10;
-    display:none; align-items:center; justify-content:center;
-  }
-  #login-screen.visible{ display:flex; }
-  .login-card{
-    position:relative; z-index:2;
-    width:min(380px, 90vw);
-    background:linear-gradient(180deg, var(--panel), var(--panel2));
-    border:1px solid var(--border);
-    border-radius:6px;
-    padding:32px 28px;
-    box-shadow:0 0 0 1px rgba(0,255,156,0.05), 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(0,255,156,0.06);
-  }
-  .login-card h1{
-    margin:0 0 4px; font-size:18px; letter-spacing:2px; color:var(--accent);
-    text-shadow:0 0 8px rgba(0,255,156,0.4);
-  }
-  .login-card p.sub{ margin:0 0 22px; font-size:11px; color:var(--dim); letter-spacing:1px; }
-  .field{ margin-bottom:16px; }
-  .field label{ display:block; font-size:11px; color:var(--dim); margin-bottom:6px; letter-spacing:1px; text-transform:uppercase; }
-  .field input{
-    width:100%; padding:10px 12px; background:#060a0a; border:1px solid var(--border);
-    color:var(--text); font-family:inherit; font-size:14px; border-radius:3px; outline:none;
-  }
-  .field input:focus{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
-  .btn{
-    width:100%; padding:11px; background:var(--accent); color:#03130b; border:none; border-radius:3px;
-    font-family:inherit; font-weight:bold; letter-spacing:1px; font-size:13px; cursor:pointer;
-    text-transform:uppercase; transition:filter .15s;
-  }
-  .btn:hover{ filter:brightness(1.15); }
-  .btn:disabled{ opacity:0.5; cursor:not-allowed; }
-  .btn.secondary{ background:transparent; border:1px solid var(--border); color:var(--text); }
-  .btn.danger{ background:var(--danger); color:#1a0006; }
-  .btn.small{ padding:6px 10px; font-size:11px; width:auto; }
-  #login-error{ margin-top:14px; font-size:12px; color:var(--danger); min-height:16px; white-space:pre-wrap; }
-
-  /* ---------------- APP SHELL ---------------- */
-  #app{
-    position:fixed; inset:0; z-index:5; display:none;
-    grid-template-columns:230px 1fr; height:100%;
-  }
-  #app.visible{ display:grid; }
-  #sidebar{
-    background:var(--panel); border-right:1px solid var(--border);
-    display:flex; flex-direction:column; overflow-y:auto;
-  }
-  #sidebar-header{ padding:16px; border-bottom:1px solid var(--border); }
-  #sidebar-header .who{ font-size:13px; color:var(--accent); font-weight:bold; }
-  #sidebar-header .lvl{ font-size:10px; color:var(--dim); margin-top:2px; }
-  #sidebar-nav{ flex:1; padding:8px 0; }
-  .nav-item{
-    padding:10px 16px; font-size:13px; cursor:pointer; color:var(--text);
-    display:flex; align-items:center; justify-content:space-between; user-select:none;
-  }
-  .nav-item:hover{ background:var(--panel2); }
-  .nav-item.active{ background:var(--panel2); color:var(--accent); border-left:2px solid var(--accent); }
-  .nav-item.settings{ border-bottom:1px solid var(--border); margin-bottom:6px; padding-bottom:14px; }
-  .nav-item.mychat{ color:var(--accent2); border-bottom:1px solid var(--border); margin-bottom:6px; padding-bottom:14px; }
-  .cat-children{ padding-left:14px; }
-  .subcat-label{ padding:6px 16px 2px; font-size:10px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; }
-  .thread-item{ padding:8px 16px; font-size:12px; cursor:pointer; color:var(--dim); display:flex; align-items:center; gap:6px; }
-  .thread-item:hover{ background:var(--panel2); color:var(--text); }
-  .thread-item.active{ color:var(--accent2); }
-  .thread-item .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent); flex-shrink:0; }
-  .thread-item.inactive .dot{ background:var(--dim); }
-  #sidebar-footer{ padding:12px 16px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:10px; }
-
-  #main{ display:flex; flex-direction:column; overflow:hidden; position:relative; }
-  #main-empty{ margin:auto; color:var(--dim); font-size:13px; }
-
-  /* Settings */
-  #settings-view{ display:none; flex:1; overflow-y:auto; padding:24px 32px; }
-  #settings-view.visible{ display:block; }
-  .tabs{ display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:20px; }
-  .tab{ padding:9px 16px; font-size:12px; cursor:pointer; color:var(--dim); border-bottom:2px solid transparent; }
-  .tab:hover{ color:var(--text); }
-  .tab.active{ color:var(--accent); border-color:var(--accent); }
-  .tab-panel{ display:none; }
-  .tab-panel.active{ display:block; }
-  .panel-card{ background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:18px 20px; margin-bottom:18px; }
-  .panel-card h3{ margin:0 0 14px; font-size:13px; color:var(--accent2); letter-spacing:1px; }
-  .form-row{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
-  .form-row .field{ flex:1; min-width:160px; margin-bottom:0; }
-  .checkline{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text); margin-bottom:8px; }
-  .cat-check-grid{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; }
-  .swatch-btn{ width:22px; height:22px; border-radius:50%; border:1px solid var(--border); cursor:pointer; padding:0; display:inline-block; vertical-align:middle; }
-  table{ width:100%; border-collapse:collapse; font-size:12px; }
-  th{ text-align:left; color:var(--dim); font-weight:normal; padding:8px; border-bottom:1px solid var(--border); font-size:11px; text-transform:uppercase; letter-spacing:1px; }
-  td{ padding:8px; border-bottom:1px solid var(--border); vertical-align:middle; }
-  .pill{ display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; border:1px solid var(--border); color:var(--dim); }
-  .pill.on{ color:var(--accent); border-color:var(--accent); }
-  .row-actions{ display:flex; gap:6px; }
-  select{ width:100%; padding:9px 10px; background:#060a0a; border:1px solid var(--border); color:var(--text); font-family:inherit; font-size:13px; border-radius:3px; }
-  .msg-note{ font-size:11px; color:var(--dim); margin-top:8px; }
-  .form-error{ font-size:12px; color:var(--danger); margin-top:8px; min-height:14px; white-space:pre-wrap; }
-  .form-success{ font-size:12px; color:var(--accent); margin-top:8px; min-height:14px; }
-
-  /* Modal */
-  .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(2px); z-index:50; display:none; align-items:center; justify-content:center; }
-  .modal-overlay.visible{ display:flex; }
-  .modal-card{ width:min(440px,92vw); background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--border); border-radius:8px; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,.6), 0 0 40px rgba(0,255,156,0.08); max-height:88vh; overflow-y:auto; }
-  .modal-card h3{ margin:0 0 16px; color:var(--accent); font-size:15px; letter-spacing:1px; }
-  .modal-actions{ display:flex; gap:8px; margin-top:6px; }
-
-  /* Chat */
-  #chat-view{ display:none; flex:1; flex-direction:column; overflow:hidden; }
-  #chat-view.visible{ display:flex; }
-  #chat-header{ padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--panel); }
-  #chat-header .title{ font-size:14px; color:var(--accent); }
-  #chat-header .meta{ font-size:11px; color:var(--dim); margin-top:2px; }
-  #chat-header .actions{ display:flex; gap:8px; align-items:center; }
-  #chat-messages{ flex:1; overflow-y:auto; padding:18px 20px; display:flex; flex-direction:column; gap:3px; }
-
-  @keyframes msgIn{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:translateY(0); } }
-  .msg-row{ display:flex; gap:9px; max-width:74%; align-items:flex-end; animation:msgIn .18s ease; margin-top:10px; }
-  .msg-row.own{ align-self:flex-end; flex-direction:row-reverse; }
-  .msg-row.other{ align-self:flex-start; flex-direction:row; }
-  .msg-row.grouped{ margin-top:2px; }
-  .avatar{
-    width:32px; height:32px; min-width:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-    font-size:13px; font-weight:bold; color:#fff; flex-shrink:0; transition:transform .15s;
-    text-shadow:0 1px 2px rgba(0,0,0,0.5);
-  }
-  .avatar:hover{ transform:scale(1.1); }
-  .avatar.spacer{ visibility:hidden; }
-  .msg-col{ display:flex; flex-direction:column; min-width:0; }
-  .msg-row.own .msg-col{ align-items:flex-end; }
-  .msg-row.other .msg-col{ align-items:flex-start; }
-  .msg{ max-width:100%; padding:9px 13px; border-radius:12px; font-size:13px; line-height:1.45; position:relative; box-shadow:0 2px 6px rgba(0,0,0,0.25); }
-  .msg .meta{ font-size:10.5px; color:var(--dim); margin-bottom:3px; display:flex; gap:6px; align-items:center; }
-  .msg .meta b{ font-weight:700; }
-  .msg .meta .time{ color:var(--dim); font-weight:normal; }
-  .msg-row.grouped .meta{ display:none; }
-  .msg-row.own .msg{ border-bottom-right-radius:4px; }
-  .msg-row.other .msg{ border-bottom-left-radius:4px; }
-  .msg.internal{ background:var(--panel2); border:1px dashed var(--border); color:var(--dim); }
-  .msg.client-reply{ background:#0b241c; border:1px solid rgba(0,255,156,0.25); color:var(--text); }
-  .msg.from-client{ background:#0d1b26; border:1px solid rgba(57,208,255,0.25); }
-  .msg img.attach{ max-width:220px; max-height:220px; border-radius:8px; display:block; margin-top:6px; cursor:pointer; border:1px solid var(--border); }
-  .msg .del{ position:absolute; top:3px; right:8px; font-size:10px; color:var(--danger); cursor:pointer; opacity:0.6; display:none; }
-  .msg:hover .del{ display:block; }
-  .msg .del:hover{ opacity:1; }
-  .day-sep{ text-align:center; font-size:10px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; margin:14px 0 4px; opacity:.7; }
-
-  #chat-input-row{ padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:10px; align-items:center; background:var(--panel); }
-  #chat-input-row input[type=text]{ flex:1; padding:11px 12px; background:#060a0a; border:1px solid var(--border); color:var(--text); font-family:inherit; border-radius:4px; outline:none; }
-  #chat-input-row input[type=text]:focus{ border-color:var(--accent2); }
-  #chat-readonly-note{ padding:10px 20px; font-size:11px; color:var(--dim); border-top:1px solid var(--border); background:var(--panel); }
-  .reply-toggle{ display:flex; align-items:center; gap:6px; font-size:11px; color:var(--dim); white-space:nowrap; user-select:none; cursor:pointer; }
-  .reply-toggle input{ accent-color:var(--accent); }
-  .reply-toggle.on{ color:var(--accent); }
-
+  h1,h2,h3{ font-family:'Orbitron', sans-serif; margin:0; }
   .hidden-el{ display:none !important; }
-  a.linklike{ color:var(--accent2); cursor:pointer; text-decoration:underline; font-size:11px; }
+
+  body::before{
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:200;
+    background:repeating-linear-gradient(0deg, rgba(255,106,26,0.025) 0px, rgba(255,106,26,0.025) 1px, transparent 2px, transparent 3px);
+    mix-blend-mode:overlay;
+  }
+  #grid-bg{ position:fixed; inset:0; z-index:0;
+    background-image:
+      linear-gradient(rgba(255,106,26,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,106,26,0.07) 1px, transparent 1px);
+    background-size:42px 42px;
+    -webkit-mask-image:radial-gradient(ellipse at center, black 0%, transparent 75%);
+            mask-image:radial-gradient(ellipse at center, black 0%, transparent 75%);
+  }
+
+  .glow-text{ text-shadow:0 0 8px rgba(255,106,26,0.65), 0 0 22px rgba(255,106,26,0.3); }
+  .btn{ font-family:'Share Tech Mono', monospace; letter-spacing:1px; text-transform:uppercase; cursor:pointer;
+    background:var(--accent); color:#160900; border:none; padding:11px 20px; font-weight:bold; font-size:12.5px;
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+    transition:filter .15s, transform .1s; }
+  .btn:hover{ filter:brightness(1.18); }
+  .btn:active{ transform:scale(0.97); }
+  .btn:disabled{ opacity:0.45; cursor:not-allowed; }
+  .btn.secondary{ background:transparent; color:var(--accent2); border:1px solid var(--accent-dim); }
+  .btn.secondary:hover{ border-color:var(--accent); }
+  .btn.danger{ background:var(--danger); color:#1a0000; }
+  .btn.small{ padding:7px 12px; font-size:11px; }
+  .btn.block{ width:100%; }
+
+  input[type=text], input[type=password], input[type=number], textarea, select{
+    width:100%; padding:10px 12px; background:#0a0503; border:1px solid var(--border); color:var(--text);
+    font-family:'Share Tech Mono', monospace; font-size:13px; outline:none; border-radius:2px;
+  }
+  input:focus, textarea:focus, select:focus{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+  textarea{ resize:vertical; min-height:80px; }
+  label{ display:block; font-size:10.5px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+  .field{ margin-bottom:14px; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+  /* ---------------- SPLASH ---------------- */
+  #splash-screen{ position:fixed; inset:0; z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px; background:radial-gradient(ellipse at center, #170c05 0%, var(--bg) 70%); }
+  #splash-screen .sigil{ font-size:52px; }
+  #splash-screen h1{ font-size:30px; letter-spacing:6px; color:var(--accent); }
+  #splash-screen p{ color:var(--dim); font-size:12px; letter-spacing:3px; text-transform:uppercase; margin-top:-14px; }
+  #connect-btn{ font-size:15px; padding:16px 46px; }
+
+  /* ---------------- HACK SEQUENCE ---------------- */
+  #hack-screen{ position:fixed; inset:0; z-index:55; display:none; align-items:center; justify-content:center; background:var(--bg); }
+  #hack-screen.visible{ display:flex; }
+  #hack-term{ width:min(620px,88vw); border:1px solid var(--border); background:rgba(10,5,3,0.9); padding:24px 26px; box-shadow:0 0 50px rgba(255,106,26,0.1), inset 0 0 40px rgba(255,106,26,0.04); }
+  #hack-lines{ min-height:210px; }
+  #hack-lines .line{ font-size:13px; line-height:2; color:var(--accent2); white-space:pre-wrap; }
+  #hack-lines .line.blocked{ color:var(--danger); }
+  #hack-lines .line.ok{ color:var(--ok); }
+  #hack-progress{ margin-top:16px; height:4px; background:var(--border); overflow:hidden; }
+  #hack-progress>div{ height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .2s linear; }
+
+  /* ---------------- LOCKOUT ---------------- */
+  #lockout-screen{ position:fixed; inset:0; z-index:90; display:none; align-items:center; justify-content:center; flex-direction:column; gap:18px; background:#0d0000; text-align:center; padding:20px; }
+  #lockout-screen.visible{ display:flex; }
+  #lockout-screen h1{ color:var(--danger); font-size:26px; letter-spacing:3px; text-shadow:0 0 14px rgba(255,59,59,0.7); animation:flicker 2.4s infinite; }
+  #lockout-screen p{ color:#ff8a8a; font-size:12px; max-width:480px; letter-spacing:1px; }
+  @keyframes flicker{ 0%,100%{opacity:1;} 47%{opacity:1;} 48%{opacity:0.4;} 49%{opacity:1;} 92%{opacity:1;} 93%{opacity:0.3;} 94%{opacity:1;} }
+
+  /* ---------------- TABLET APP ---------------- */
+  #tablet-app{ position:fixed; inset:0; z-index:5; display:none; flex-direction:column; }
+  #tablet-app.visible{ display:flex; }
+  #topbar{ height:56px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 18px; border-bottom:1px solid var(--border); background:var(--panel); z-index:10; }
+  #topbar .brand{ font-family:'Orbitron',sans-serif; font-weight:800; letter-spacing:2px; color:var(--accent); font-size:15px; }
+  #topbar .brand span{ color:var(--accent2); font-weight:600; }
+  #topbar .right{ display:flex; align-items:center; gap:16px; }
+  #topbar .status{ font-size:10.5px; color:var(--ok); letter-spacing:1px; display:flex; align-items:center; gap:6px; }
+  #topbar .status .dot{ width:6px; height:6px; border-radius:50%; background:var(--ok); box-shadow:0 0 6px var(--ok); }
+  #topbar .clock{ font-size:11px; color:var(--dim); }
+
+  #main-area{ flex:1; display:flex; overflow:hidden; position:relative; }
+  #map-wrap{ flex:1; overflow:auto; position:relative; background:#08050380; }
+  #map-container{ position:relative; margin:0 auto; }
+  #map-image{ display:block; max-width:none; user-select:none; -webkit-user-drag:none; }
+  #map-placeholder{ width:1200px; height:700px; background:
+      repeating-linear-gradient(45deg, rgba(255,106,26,0.04) 0 2px, transparent 2px 26px),
+      repeating-linear-gradient(-45deg, rgba(255,106,26,0.04) 0 2px, transparent 2px 26px), #0a0503;
+    display:flex; align-items:center; justify-content:center; }
+  #map-placeholder span{ color:var(--dim); font-size:13px; letter-spacing:2px; text-transform:uppercase; border:1px dashed var(--border); padding:16px 26px; }
+  #pins-layer{ position:absolute; inset:0; cursor:default; }
+  #pins-layer.place-mode{ cursor:crosshair; }
+  .mission-pin{ position:absolute; transform:translate(-50%,-50%); width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; cursor:pointer; background:radial-gradient(circle at 35% 30%, #2a1305, #0c0503); border:2px solid var(--accent); box-shadow:0 0 10px rgba(255,106,26,0.6); transition:transform .12s; }
+  .mission-pin:hover{ transform:translate(-50%,-50%) scale(1.18); }
+  .mission-pin.selected{ box-shadow:0 0 0 3px rgba(255,179,71,0.5), 0 0 16px rgba(255,106,26,0.9); }
+  .mission-pin.status-in_progress{ border-color:var(--warn); box-shadow:0 0 10px rgba(255,210,59,0.6); animation:pulse 1.6s infinite; }
+  .mission-pin.status-completed{ border-color:var(--ok); box-shadow:0 0 8px rgba(76,175,122,0.5); opacity:0.75; }
+  .mission-pin.status-failed{ border-color:var(--danger); box-shadow:0 0 8px rgba(255,59,59,0.5); opacity:0.6; }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 8px rgba(255,210,59,0.5);} 50%{ box-shadow:0 0 16px rgba(255,210,59,0.9);} }
+
+  #place-hint{ position:absolute; top:14px; left:50%; transform:translateX(-50%); background:var(--panel2); border:1px solid var(--accent); color:var(--accent2); font-size:11.5px; letter-spacing:1px; padding:9px 18px; text-transform:uppercase; z-index:15; }
+
+  #detail-panel{ width:340px; flex-shrink:0; border-left:1px solid var(--border); background:var(--panel); padding:22px 20px; overflow-y:auto; }
+  #detail-panel.hidden-el{ display:none; }
+  #detail-panel .close-btn{ float:right; background:transparent; border:none; color:var(--dim); font-size:16px; cursor:pointer; }
+  #detail-panel .close-btn:hover{ color:var(--text); }
+  #detail-panel h2{ font-size:17px; color:var(--accent2); margin-bottom:4px; padding-right:20px; }
+  #detail-panel .giver{ font-size:11px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; margin-bottom:16px; }
+  #detail-panel .giver b{ color:var(--accent); }
+  .badge{ display:inline-block; font-size:10px; padding:3px 9px; border-radius:10px; text-transform:uppercase; letter-spacing:1px; border:1px solid; margin-right:6px; margin-bottom:14px; }
+  .badge.risk-low{ color:var(--ok); border-color:var(--ok); }
+  .badge.risk-medium{ color:var(--accent2); border-color:var(--accent); }
+  .badge.risk-high{ color:var(--danger); border-color:var(--danger); }
+  .badge.risk-extreme{ color:var(--extreme); border-color:var(--extreme); }
+  .badge.status-open{ color:var(--accent2); border-color:var(--accent); }
+  .badge.status-in_progress{ color:var(--warn); border-color:var(--warn); }
+  .badge.status-completed{ color:var(--ok); border-color:var(--ok); }
+  .badge.status-failed{ color:var(--danger); border-color:var(--danger); }
+  #detail-panel .desc-label{ font-size:10.5px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin:14px 0 6px; }
+  #detail-panel .desc{ font-size:13px; line-height:1.6; color:var(--text); white-space:pre-wrap; }
+  #detail-panel .reward{ margin-top:16px; padding:12px 14px; background:var(--panel2); border:1px solid var(--border); font-size:13px; }
+  #detail-panel .reward b{ color:var(--accent2); }
+  #detail-panel .admin-row{ display:flex; gap:8px; margin-top:20px; }
+
+  /* hidden admin trigger */
+  #hidden-admin-btn{ position:fixed; bottom:10px; right:10px; width:16px; height:16px; border-radius:50%;
+    background:rgba(255,106,26,0.12); border:1px solid rgba(255,106,26,0.15); cursor:pointer; z-index:30; padding:0; }
+  #hidden-admin-btn:hover{ background:rgba(255,106,26,0.35); }
+  #admin-badge{ position:fixed; bottom:10px; right:36px; z-index:30; display:flex; gap:6px; align-items:center; background:var(--panel2); border:1px solid var(--accent-dim); padding:6px 10px; font-size:10.5px; letter-spacing:1px; color:var(--accent2); }
+
+  /* ---------------- MODALS ---------------- */
+  .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(2px); z-index:100; display:none; align-items:center; justify-content:center; padding:20px; }
+  .modal-overlay.visible{ display:flex; }
+  .modal-card{ width:min(460px,94vw); max-height:88vh; overflow-y:auto; background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--border); padding:26px; box-shadow:0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(255,106,26,0.08);
+    clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px); }
+  .modal-card.wide{ width:min(720px,94vw); }
+  .modal-card h3{ font-size:15px; color:var(--accent); letter-spacing:1px; margin-bottom:18px; }
+  .modal-actions{ display:flex; gap:8px; margin-top:8px; }
+  .form-error{ font-size:12px; color:var(--danger); margin-top:6px; min-height:14px; }
+  .form-note{ font-size:11px; color:var(--dim); margin-top:8px; line-height:1.5; }
+
+  .icon-pick{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .icon-pick button{ width:36px; height:36px; font-size:16px; background:#0a0503; border:1px solid var(--border); cursor:pointer; border-radius:4px; }
+  .icon-pick button.active{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+
+  /* admin panel */
+  .admin-tabs{ display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:16px; }
+  .admin-tab{ padding:8px 14px; font-size:11.5px; letter-spacing:1px; text-transform:uppercase; color:var(--dim); cursor:pointer; border-bottom:2px solid transparent; }
+  .admin-tab.active{ color:var(--accent2); border-color:var(--accent); }
+  .admin-tab-panel{ display:none; }
+  .admin-tab-panel.active{ display:block; }
+  .mission-list-item{ display:flex; align-items:center; gap:10px; padding:10px; border:1px solid var(--border); margin-bottom:8px; background:var(--bg2); }
+  .mission-list-item .ic{ font-size:16px; }
+  .mission-list-item .info{ flex:1; min-width:0; }
+  .mission-list-item .info .t{ font-size:12.5px; color:var(--text); }
+  .mission-list-item .info .m{ font-size:10.5px; color:var(--dim); margin-top:2px; }
+  .mission-list-item .acts{ display:flex; gap:6px; }
+  #map-upload-preview{ width:100%; max-height:160px; object-fit:cover; border:1px solid var(--border); margin-top:10px; display:none; }
+  .self-destruct-box{ border:1px solid var(--danger); background:rgba(255,59,59,0.06); padding:16px; }
+  .self-destruct-box p{ font-size:12px; color:#ffb3b3; line-height:1.6; margin:0 0 12px; }
+  .sd-status{ font-size:11px; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px; }
+  .sd-status.off{ color:var(--ok); }
+  .sd-status.on{ color:var(--danger); }
 </style>
 </head>
 <body>
 
-<canvas id="matrix-canvas"></canvas>
+<div id="grid-bg"></div>
 
-<div class="lang-toggle">
-  <button id="lang-en" data-lang="en">EN</button>
-  <button id="lang-fr" data-lang="fr">FR</button>
+<!-- ============ SPLASH ============ -->
+<div id="splash-screen">
+  <div class="sigil glow-text">◈</div>
+  <h1 class="glow-text">SOVEREIGN</h1>
+  <p>Mission Uplink Terminal</p>
+  <button class="btn" id="connect-btn">Connect</button>
 </div>
 
-<!-- ============ BOOT SCREEN ============ -->
-<div id="boot-screen">
-  <div id="boot-term">
-    <div id="boot-lines"></div>
-    <div id="boot-progress"><div id="boot-progress-bar"></div></div>
+<!-- ============ HACK SEQUENCE ============ -->
+<div id="hack-screen">
+  <div id="hack-term">
+    <div id="hack-lines"></div>
+    <div id="hack-progress"><div id="hack-progress-bar"></div></div>
   </div>
 </div>
 
-<!-- ============ LOGIN ============ -->
-<div id="login-screen">
-  <div class="login-card">
-    <h1 data-i18n="appTitle">SECURE ACCESS TERMINAL</h1>
-    <p class="sub" data-i18n="appSubtitle">AUTHORIZED PERSONNEL ONLY // ENTER CREDENTIALS</p>
-    <div class="field">
-      <label data-i18n="loginUsername">Username</label>
-      <input type="text" id="login-username" autocomplete="username" />
+<!-- ============ LOCKOUT ============ -->
+<div id="lockout-screen">
+  <h1 id="lockout-title">⚠ NETWORK COMPROMISED ⚠</h1>
+  <p id="lockout-msg">SOVEREIGN UPLINK SEVERED — STANDBY FOR RECONNECTION</p>
+</div>
+
+<!-- ============ TABLET APP ============ -->
+<div id="tablet-app">
+  <div id="topbar">
+    <div class="brand">◈ SOVEREIGN <span>// UPLINK</span></div>
+    <div class="right">
+      <div class="clock" id="topbar-clock">--:--:--</div>
+      <div class="status"><span class="dot"></span> SECURE CHANNEL</div>
     </div>
-    <div class="field">
-      <label data-i18n="loginPassword">Password</label>
-      <input type="password" id="login-password" autocomplete="current-password" />
+  </div>
+  <div id="main-area">
+    <div id="map-wrap">
+      <div id="map-container">
+        <img id="map-image" class="hidden-el" />
+        <div id="map-placeholder"><span>NO MAP LOADED — UPLOAD VIA ADMIN PANEL</span></div>
+        <div id="pins-layer"></div>
+        <div id="place-hint" class="hidden-el">CLICK THE MAP TO PLACE THE MISSION</div>
+      </div>
     </div>
-    <button class="btn" id="login-btn" data-i18n="loginBtn">Connect</button>
-    <div id="login-error"></div>
+    <div id="detail-panel" class="hidden-el"></div>
   </div>
 </div>
 
-<!-- ============ APP ============ -->
-<div id="app">
-  <div id="sidebar">
-    <div id="sidebar-header">
-      <div class="who" id="who-name">—</div>
-      <div class="lvl" id="who-level">—</div>
-    </div>
-    <div id="sidebar-nav"></div>
-    <div id="sidebar-footer">
-      <button class="btn secondary small" id="logout-btn" data-i18n="disconnectBtn">Disconnect</button>
-    </div>
-  </div>
-  <div id="main">
-    <div id="main-empty" data-i18n="emptyStateSelect">Select a category or chat from the left.</div>
-
-    <div id="settings-view">
-      <div class="tabs">
-        <div class="tab active" data-tab="accounts" data-i18n="tabAccounts">Accounts</div>
-        <div class="tab" data-tab="roles" data-i18n="tabRoles">Roles</div>
-        <div class="tab" data-tab="categories" data-i18n="tabCategories">Categories</div>
-      </div>
-
-      <div class="tab-panel active" id="tab-accounts">
-        <div class="panel-card" id="create-account-card">
-          <h3 data-i18n="createAccountTitle">Create Account</h3>
-          <div class="form-row">
-            <div class="field">
-              <label data-i18n="fieldUsername">Username</label>
-              <input type="text" id="new-acc-username" />
-            </div>
-            <div class="field">
-              <label data-i18n="fieldPassword">Password</label>
-              <input type="text" id="new-acc-password" />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="field">
-              <label data-i18n="fieldCategory">Category (their personal chat)</label>
-              <select id="new-acc-category"></select>
-            </div>
-            <div class="field">
-              <label data-i18n="fieldSubcategory">Sub-category (optional)</label>
-              <select id="new-acc-subcategory"><option value="">—</option></select>
-            </div>
-            <div class="field">
-              <label data-i18n="fieldRole">Role (optional)</label>
-              <select id="new-acc-role"></select>
-            </div>
-            <div class="field">
-              <label data-i18n="fieldBusiness">Business (optional)</label>
-              <input type="text" id="new-acc-business" />
-            </div>
-            <div class="field" style="max-width:110px;">
-              <label data-i18n="fieldAvatarColor">Avatar color</label>
-              <input type="color" id="new-acc-color" value="#00ff9c" style="width:100%;height:38px;padding:2px;background:#060a0a;border:1px solid var(--border);border-radius:3px;" />
-            </div>
-          </div>
-          <button class="btn small" id="create-account-btn" data-i18n="createBtn">Create</button>
-          <div class="form-error" id="create-account-error"></div>
-          <div class="form-success" id="create-account-success"></div>
-        </div>
-
-        <div class="panel-card">
-          <h3 data-i18n="allAccountsTitle">All Accounts</h3>
-          <table>
-            <thead><tr>
-              <th data-i18n="thAvatar">Avatar</th>
-              <th data-i18n="thUsername">Username</th>
-              <th data-i18n="thRole">Role</th>
-              <th data-i18n="thCategory">Category</th>
-              <th data-i18n="thBusiness">Business</th>
-              <th data-i18n="thStatus">Status</th>
-              <th data-i18n="thActions">Actions</th>
-            </tr></thead>
-            <tbody id="accounts-table-body"></tbody>
-          </table>
-        </div>
-
-        <div class="panel-card" id="maintenance-card">
-          <h3 data-i18n="maintenanceTitle">Maintenance</h3>
-          <button class="btn secondary small" id="cleanup-images-btn" data-i18n="cleanupImagesBtn">Clear images older than 5 days</button>
-          <div class="msg-note" data-i18n="cleanupNote">Images are also cleared automatically every day by a scheduled job.</div>
-          <div class="form-success" id="cleanup-success"></div>
-          <div class="form-error" id="cleanup-error"></div>
-        </div>
-      </div>
-
-      <div class="tab-panel" id="tab-roles">
-        <div class="panel-card">
-          <h3 id="role-form-title" data-i18n="createRoleTitle">Create Role</h3>
-          <div class="form-row">
-            <div class="field"><label data-i18n="fieldName">Name</label><input type="text" id="new-role-name" /></div>
-            <div class="field">
-              <label data-i18n="fieldLevel">Level (1-8)</label>
-              <input type="number" id="new-role-level" min="1" max="8" value="1" />
-            </div>
-          </div>
-          <div class="checkline"><input type="checkbox" id="perm-write" checked /> <label for="perm-write" data-i18n="permWrite">Can write in chats</label></div>
-          <div class="checkline"><input type="checkbox" id="perm-move" /> <label for="perm-move" data-i18n="permMove">Can move chats between categories</label></div>
-          <div class="checkline"><input type="checkbox" id="perm-subcat" /> <label for="perm-subcat" data-i18n="permSubcat">Can create sub-categories</label></div>
-          <div class="checkline"><input type="checkbox" id="perm-kick" /> <label for="perm-kick" data-i18n="permKick">Can kick (disable) accounts — level 9/10 always can</label></div>
-          <div class="checkline"><input type="checkbox" id="perm-delete" /> <label for="perm-delete" data-i18n="permDelete">Can delete accounts/messages — level 9/10 always can</label></div>
-          <label data-i18n="permCategories" style="display:block;font-size:11px;color:var(--dim);margin:12px 0 6px;text-transform:uppercase;letter-spacing:1px;">Visible categories (only applies if level is below 6)</label>
-          <div class="cat-check-grid" id="new-role-categories"></div>
-          <div style="display:flex; gap:8px;">
-            <button class="btn small" id="create-role-btn" data-i18n="createRoleBtn">Create Role</button>
-            <button class="btn secondary small hidden-el" id="cancel-edit-role-btn" data-i18n="cancelBtn">Cancel</button>
-          </div>
-          <div class="form-error" id="create-role-error"></div>
-          <div class="msg-note" data-i18n="permCategoriesNote">Levels 9 and 10 are permanently reserved for the two founding accounts and can't be assigned to a new role.</div>
-        </div>
-
-        <div class="panel-card">
-          <h3 data-i18n="existingRolesTitle">Existing Roles</h3>
-          <table>
-            <thead><tr>
-              <th data-i18n="thName">Name</th>
-              <th data-i18n="thLevel">Level</th>
-              <th data-i18n="thWrite">Write</th>
-              <th data-i18n="thMove">Move</th>
-              <th data-i18n="thSubcat">Sub-cat</th>
-              <th data-i18n="thKick">Kick</th>
-              <th data-i18n="thDeleteCol">Delete</th>
-              <th data-i18n="thCategories">Categories</th>
-              <th data-i18n="thActions">Actions</th>
-            </tr></thead>
-            <tbody id="roles-table-body"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="tab-panel" id="tab-categories">
-        <div class="panel-card" id="create-category-card">
-          <h3 id="cat-form-title" data-i18n="createCategoryTitle">Create Category</h3>
-          <div class="form-row">
-            <div class="field">
-              <label data-i18n="fieldCategoryName">Name</label>
-              <input type="text" id="new-cat-name" />
-            </div>
-            <div class="field" style="max-width:120px;">
-              <label data-i18n="fieldColor">Color</label>
-              <input type="color" id="new-cat-color" value="#00ff9c" style="width:100%;height:38px;padding:2px;background:#060a0a;border:1px solid var(--border);border-radius:3px;" />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="field">
-              <label data-i18n="fieldWebhook">Discord webhook for this category (optional)</label>
-              <input type="text" id="new-cat-webhook" placeholder="https://discord.com/api/webhooks/..." />
-            </div>
-          </div>
-          <div style="display:flex; gap:8px;">
-            <button class="btn small" id="create-cat-btn" data-i18n="addBtn">Add</button>
-            <button class="btn secondary small hidden-el" id="cancel-edit-cat-btn" data-i18n="cancelBtn">Cancel</button>
-          </div>
-          <div class="form-error" id="create-cat-error"></div>
-          <div class="msg-note" data-i18n="webhookNote">Leave blank to use the default DISCORD_WEBHOOK_URL for this category's notifications.</div>
-        </div>
-        <div class="panel-card">
-          <h3 data-i18n="addSubcatTitle">Add Sub-category</h3>
-          <div class="form-row">
-            <div class="field">
-              <label data-i18n="fieldParentCategory">Parent Category</label>
-              <select id="new-subcat-parent"></select>
-            </div>
-            <div class="field">
-              <label data-i18n="fieldSubcatName">Name</label>
-              <input type="text" id="new-subcat-name" />
-            </div>
-          </div>
-          <button class="btn small" id="create-subcat-btn" data-i18n="addBtn">Add</button>
-          <div class="form-error" id="create-subcat-error"></div>
-        </div>
-        <div class="panel-card">
-          <h3 data-i18n="categoriesTitle">Categories</h3>
-          <table>
-            <thead><tr><th data-i18n="thColor">Color</th><th data-i18n="thCategoryCol">Category</th><th data-i18n="thSubcategories">Sub-categories</th><th data-i18n="thWebhookCol">Webhook</th><th data-i18n="thActions">Actions</th></tr></thead>
-            <tbody id="categories-table-body"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div id="chat-view">
-      <div id="chat-header">
-        <div>
-          <div class="title" id="chat-title">—</div>
-          <div class="meta" id="chat-meta">—</div>
-        </div>
-        <div class="actions">
-          <select id="chat-move-select" style="width:auto;"></select>
-          <button class="btn secondary small" id="chat-kick-btn" data-i18n="kick">Kick</button>
-          <button class="btn danger small" id="chat-delete-btn" data-i18n="deleteBtn">Delete</button>
-        </div>
-      </div>
-      <div id="chat-messages"></div>
-      <div id="chat-readonly-note" class="hidden-el" data-i18n="readOnlyNote">View only — replying here requires level 6+.</div>
-      <div id="chat-input-row">
-        <label class="reply-toggle" id="reply-toggle-wrap">
-          <input type="checkbox" id="reply-toggle" />
-          <span data-i18n="chatReplyToggle">Reply to client (!r)</span>
-        </label>
-        <input type="text" id="chat-input" data-i18n-placeholder="chatPlaceholderStaff" placeholder="Type a message... prefix with !r to send to the client" />
-        <input type="file" id="chat-image-input" accept="image/png" class="hidden-el" />
-        <button class="btn secondary small" id="chat-image-btn" title="PNG" data-i18n="imageBtn">🖼</button>
-        <button class="btn small" id="chat-send-btn" data-i18n="sendBtn">Send</button>
-      </div>
-    </div>
-  </div>
+<button id="hidden-admin-btn" class="hidden-el" title=""></button>
+<div id="admin-badge" class="hidden-el">
+  <span>⚙ ADMIN</span>
+  <button class="btn secondary small" id="open-admin-panel-btn">Panel</button>
+  <button class="btn secondary small" id="admin-logout-btn">Exit</button>
 </div>
 
-<!-- ============ EDIT ACCOUNT MODAL ============ -->
-<div class="modal-overlay" id="edit-account-modal">
+<!-- ============ ADMIN LOGIN MODAL ============ -->
+<div class="modal-overlay" id="admin-login-modal">
   <div class="modal-card">
-    <h3 data-i18n="editAccountTitle">Edit Account</h3>
+    <h3>◈ ADMIN OVERRIDE — ENTER CIPHER</h3>
     <div class="field">
-      <label data-i18n="fieldUsername">Username</label>
-      <input type="text" id="edit-acc-username" />
-    </div>
-    <div class="field">
-      <label data-i18n="fieldNewPassword">New password (leave blank to keep current)</label>
-      <input type="text" id="edit-acc-password" />
-    </div>
-    <div class="form-row">
-      <div class="field">
-        <label data-i18n="fieldRole">Role</label>
-        <select id="edit-acc-role"></select>
-      </div>
-      <div class="field" style="max-width:110px;">
-        <label data-i18n="fieldAvatarColor">Avatar color</label>
-        <input type="color" id="edit-acc-color" style="width:100%;height:38px;padding:2px;background:#060a0a;border:1px solid var(--border);border-radius:3px;" />
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="field">
-        <label data-i18n="fieldCategory">Category</label>
-        <select id="edit-acc-category"></select>
-      </div>
-      <div class="field">
-        <label data-i18n="fieldSubcategory">Sub-category</label>
-        <select id="edit-acc-subcategory"><option value="">—</option></select>
-      </div>
-    </div>
-    <div class="field">
-      <label data-i18n="fieldBusiness">Business</label>
-      <input type="text" id="edit-acc-business" />
+      <label>Password</label>
+      <input type="password" id="admin-login-password" autocomplete="off" />
     </div>
     <div class="modal-actions">
-      <button class="btn small" id="edit-acc-save-btn" data-i18n="saveChangesBtn">Save Changes</button>
-      <button class="btn secondary small" id="edit-acc-cancel-btn" data-i18n="cancelBtn">Cancel</button>
+      <button class="btn" id="admin-login-submit">Authenticate</button>
+      <button class="btn secondary" id="admin-login-cancel">Cancel</button>
     </div>
-    <div class="form-error" id="edit-acc-error"></div>
-    <div class="form-success" id="edit-acc-success"></div>
+    <div class="form-error" id="admin-login-error"></div>
+  </div>
+</div>
+
+<!-- ============ MISSION FORM MODAL ============ -->
+<div class="modal-overlay" id="mission-form-modal">
+  <div class="modal-card">
+    <h3 id="mission-form-title">New Mission</h3>
+    <div class="field">
+      <label>Title</label>
+      <input type="text" id="mf-title" />
+    </div>
+    <div class="field">
+      <label>Mission Giver</label>
+      <input type="text" id="mf-giver" value="Sovereign" />
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="mf-description"></textarea>
+    </div>
+    <div class="field">
+      <label>Reward</label>
+      <input type="text" id="mf-reward" placeholder="e.g. $25,000 + supply drop" />
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Risk</label>
+        <select id="mf-risk">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+          <option value="extreme">Extreme</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="mf-status">
+          <option value="open" selected>Open</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+        </select>
+      </div>
+    </div>
+    <label>Icon</label>
+    <div class="icon-pick" id="mf-icon-pick"></div>
+    <div class="modal-actions">
+      <button class="btn" id="mf-save-btn">Save Mission</button>
+      <button class="btn secondary" id="mf-cancel-btn">Cancel</button>
+      <button class="btn danger hidden-el" id="mf-delete-btn">Delete</button>
+    </div>
+    <div class="form-error" id="mf-error"></div>
+  </div>
+</div>
+
+<!-- ============ ADMIN PANEL MODAL ============ -->
+<div class="modal-overlay" id="admin-panel-modal">
+  <div class="modal-card wide">
+    <h3>◈ ADMIN CONTROL PANEL</h3>
+    <div class="admin-tabs">
+      <div class="admin-tab active" data-tab="missions">Missions</div>
+      <div class="admin-tab" data-tab="map">Map</div>
+      <div class="admin-tab" data-tab="killswitch">Kill Switch</div>
+    </div>
+
+    <div class="admin-tab-panel active" id="admin-tab-missions">
+      <button class="btn small" id="admin-place-mission-btn" style="margin-bottom:14px;">📍 Place New Mission</button>
+      <div id="admin-mission-list"></div>
+    </div>
+
+    <div class="admin-tab-panel" id="admin-tab-map">
+      <label>Upload Map Image</label>
+      <input type="file" id="map-upload-input" accept="image/*" />
+      <img id="map-upload-preview" />
+      <div class="form-note">Uploading replaces the current map for everyone immediately. Existing mission pins keep their position (percentage-based), so make sure the new map covers the same area.</div>
+      <div class="form-error" id="map-upload-error"></div>
+    </div>
+
+    <div class="admin-tab-panel" id="admin-tab-killswitch">
+      <div class="self-destruct-box">
+        <div class="sd-status off" id="sd-status-label">● NETWORK OPERATIONAL</div>
+        <p>Pressing this severs the tablet for everyone except admins. Regular operatives will see a lockout screen until an admin re-enables the network from this same panel.</p>
+        <button class="btn danger block" id="self-destruct-btn">Self-Destruct — Sever Network</button>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:20px;">
+      <button class="btn secondary" id="admin-panel-close-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CONFIRM / ALERT MODALS ============ -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal-card" style="width:min(380px,90vw);">
+    <h3 id="confirm-modal-title">Confirm</h3>
+    <div id="confirm-modal-msg" style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:18px;white-space:pre-wrap;"></div>
+    <div class="modal-actions">
+      <button class="btn danger small" id="confirm-modal-ok">OK</button>
+      <button class="btn secondary small" id="confirm-modal-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="alert-modal">
+  <div class="modal-card" style="width:min(380px,90vw);">
+    <h3 id="alert-modal-title">Notice</h3>
+    <div id="alert-modal-msg" style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:18px;white-space:pre-wrap;"></div>
+    <div class="modal-actions">
+      <button class="btn small" id="alert-modal-ok">OK</button>
+    </div>
   </div>
 </div>
 
 <script>
 /* ============================================================================
-   CONFIG — paste your Supabase project URL + anon (public) key here.
-   Find them in Supabase Dashboard -> Project Settings -> API.
+   CONFIG
    ========================================================================== */
 const SUPABASE_URL = "https://taawronqapxbhndqwfng.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_7JdOFQql8jafMJz_SnwOTQ_h_Wvb1RP";
-
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const ADMIN_EMAIL = "sovereign-admin@tablet.local";
+const ICONS = ["🎯","📦","🔫","💰","⚠️","🚨","🛠️","🗝️","🚗","☠️"];
 
 /* ============================================================================
-   I18N
+   STATE
    ========================================================================== */
-const TRANSLATIONS = {
-  en: {
-    appTitle: "SECURE ACCESS TERMINAL",
-    appSubtitle: "AUTHORIZED PERSONNEL ONLY // ENTER CREDENTIALS",
-    loginUsername: "Username", loginPassword: "Password", loginBtn: "Connect", loginConnecting: "Authenticating...",
-    errFields: "ERROR: username and password required.",
-    errInvalidCreds: "ACCESS DENIED: invalid credentials.",
-    errNoProfile: "ERROR: no profile found for this account.",
-    errDisabled: "ACCESS DENIED: this account has been disabled.",
-    disconnectBtn: "Disconnect",
-    emptyStateSelect: "Select a category or chat from the left.",
-    noChatsYet: "(no chats yet)", empty: "(empty)",
-    tabAccounts: "Accounts", tabRoles: "Roles", tabCategories: "Categories",
-    createAccountTitle: "Create Account",
-    fieldUsername: "Username", fieldPassword: "Password",
-    fieldCategory: "Category (their personal chat)", fieldSubcategory: "Sub-category (optional)",
-    fieldRole: "Role (optional)", roleDefaultOption: "— Member (default) —",
-    createBtn: "Create", allAccountsTitle: "All Accounts",
-    thUsername: "Username", thRole: "Role", thCategory: "Category", thBusiness: "Business", thStatus: "Status", thActions: "Actions",
-    active: "active", disabled: "disabled",
-    kick: "Kick", restore: "Restore", deleteBtn: "Delete", cancelBtn: "Cancel", editBtn2: "Edit",
-    confirmDelete: 'Permanently delete "{u}"? This cannot be undone.',
-    fieldBusiness: "Business (optional)",
-    createCategoryTitle: "Create Category", editCategoryTitle: "Edit Category",
-    fieldCategoryName: "Name", fieldColor: "Color", thColor: "Color", thWebhookCol: "Webhook",
-    fieldWebhook: "Discord webhook for this category (optional)",
-    webhookNote: "Leave blank to use the default DISCORD_WEBHOOK_URL for this category's notifications.",
-    fieldAvatarColor: "Avatar color", thAvatar: "Avatar",
-    imageBtn: "🖼", imageOnlyPng: "Only .png images are supported.", imageTooBig: "Image is too large (max 5MB).", uploading: "Uploading...",
-    createRoleTitle: "Create Role", editRoleTitle: "Edit Role",
-    fieldName: "Name", fieldLevel: "Level (1-8)",
-    permWrite: "Can write in chats",
-    permMove: "Can move chats between categories",
-    permSubcat: "Can create sub-categories",
-    permKick: "Can kick (disable) accounts — level 9/10 always can",
-    permDelete: "Can delete accounts/messages — level 9/10 always can",
-    permCategories: "Visible categories (only applies if level is below 6)",
-    permCategoriesNote: "Levels 9 and 10 are permanently reserved for the two founding accounts and can't be assigned to a new role.",
-    createRoleBtn: "Create Role", saveChangesBtn: "Save Changes",
-    existingRolesTitle: "Existing Roles",
-    thName: "Name", thLevel: "Level", thWrite: "Write", thMove: "Move", thSubcat: "Sub-cat", thKick: "Kick", thDeleteCol: "Delete", thCategories: "Categories",
-    editBtn: "Edit",
-    addSubcatTitle: "Add Sub-category", fieldParentCategory: "Parent Category", fieldSubcatName: "Name", addBtn: "Add",
-    categoriesTitle: "Categories", thCategoryCol: "Category", thSubcategories: "Sub-categories",
-    chatReplyToggle: "Reply to client (!r)",
-    chatPlaceholderStaff: "Type a message... prefix with !r to send to the client",
-    chatPlaceholderOwn: "Type a message...",
-    sendBtn: "Send", readOnlyNote: "View only — replying here requires level 6+.",
-    myChat: "💬 My Chat", settingsNav: "⚙ Settings",
-    yes: "yes", no: "no", internalNote: "(internal note)", sentToClient: "(sent to client)", you: "You", staff: "Staff",
-    editAccountTitle: "Edit Account", fieldNewPassword: "New password (leave blank to keep current)",
-    maintenanceTitle: "Maintenance", cleanupImagesBtn: "Clear images older than 5 days",
-    cleanupNote: "Images are also cleared automatically every day by a scheduled job.",
-    cleanupDone: "Done — {n} image(s) cleared.",
-    savedOk: "Saved.",
-  },
-  fr: {
-    appTitle: "TERMINAL D'ACCÈS SÉCURISÉ",
-    appSubtitle: "PERSONNEL AUTORISÉ UNIQUEMENT // ENTREZ VOS IDENTIFIANTS",
-    loginUsername: "Nom d'utilisateur", loginPassword: "Mot de passe", loginBtn: "Connexion", loginConnecting: "Authentification...",
-    errFields: "ERREUR : nom d'utilisateur et mot de passe requis.",
-    errInvalidCreds: "ACCÈS REFUSÉ : identifiants invalides.",
-    errNoProfile: "ERREUR : aucun profil trouvé pour ce compte.",
-    errDisabled: "ACCÈS REFUSÉ : ce compte a été désactivé.",
-    disconnectBtn: "Déconnexion",
-    emptyStateSelect: "Sélectionnez une catégorie ou un chat à gauche.",
-    noChatsYet: "(aucun chat pour l'instant)", empty: "(vide)",
-    tabAccounts: "Comptes", tabRoles: "Rôles", tabCategories: "Catégories",
-    createAccountTitle: "Créer un compte",
-    fieldUsername: "Nom d'utilisateur", fieldPassword: "Mot de passe",
-    fieldCategory: "Catégorie (son chat personnel)", fieldSubcategory: "Sous-catégorie (optionnel)",
-    fieldRole: "Rôle (optionnel)", roleDefaultOption: "— Membre (par défaut) —",
-    createBtn: "Créer", allAccountsTitle: "Tous les comptes",
-    thUsername: "Nom d'utilisateur", thRole: "Rôle", thCategory: "Catégorie", thBusiness: "Business", thStatus: "Statut", thActions: "Actions",
-    active: "actif", disabled: "désactivé",
-    kick: "Exclure", restore: "Restaurer", deleteBtn: "Supprimer", cancelBtn: "Annuler", editBtn2: "Modifier",
-    confirmDelete: 'Supprimer définitivement "{u}" ? Cette action est irréversible.',
-    fieldBusiness: "Business (optionnel)",
-    createCategoryTitle: "Créer une catégorie", editCategoryTitle: "Modifier la catégorie",
-    fieldCategoryName: "Nom", fieldColor: "Couleur", thColor: "Couleur", thWebhookCol: "Webhook",
-    fieldWebhook: "Webhook Discord pour cette catégorie (optionnel)",
-    webhookNote: "Laisser vide pour utiliser le DISCORD_WEBHOOK_URL par défaut pour cette catégorie.",
-    fieldAvatarColor: "Couleur d'avatar", thAvatar: "Avatar",
-    imageBtn: "🖼", imageOnlyPng: "Seules les images .png sont supportées.", imageTooBig: "Image trop volumineuse (5 Mo max).", uploading: "Envoi en cours...",
-    createRoleTitle: "Créer un rôle", editRoleTitle: "Modifier le rôle",
-    fieldName: "Nom", fieldLevel: "Niveau (1-8)",
-    permWrite: "Peut écrire dans les chats",
-    permMove: "Peut déplacer les chats entre catégories",
-    permSubcat: "Peut créer des sous-catégories",
-    permKick: "Peut exclure (désactiver) des comptes — niveau 9/10 toujours autorisé",
-    permDelete: "Peut supprimer comptes/messages — niveau 9/10 toujours autorisé",
-    permCategories: "Catégories visibles (seulement si niveau inférieur à 6)",
-    permCategoriesNote: "Les niveaux 9 et 10 sont réservés en permanence aux deux comptes fondateurs et ne peuvent pas être attribués à un nouveau rôle.",
-    createRoleBtn: "Créer le rôle", saveChangesBtn: "Enregistrer",
-    existingRolesTitle: "Rôles existants",
-    thName: "Nom", thLevel: "Niveau", thWrite: "Écrire", thMove: "Déplacer", thSubcat: "Sous-cat.", thKick: "Exclure", thDeleteCol: "Supprimer", thCategories: "Catégories",
-    editBtn: "Modifier",
-    addSubcatTitle: "Ajouter une sous-catégorie", fieldParentCategory: "Catégorie parente", fieldSubcatName: "Nom", addBtn: "Ajouter",
-    categoriesTitle: "Catégories", thCategoryCol: "Catégorie", thSubcategories: "Sous-catégories",
-    chatReplyToggle: "Répondre au client (!r)",
-    chatPlaceholderStaff: "Écrire un message... préfixez avec !r pour l'envoyer au client",
-    chatPlaceholderOwn: "Écrire un message...",
-    sendBtn: "Envoyer", readOnlyNote: "Lecture seule — répondre ici nécessite le niveau 6+.",
-    myChat: "💬 Mon Chat", settingsNav: "⚙ Paramètres",
-    yes: "oui", no: "non", internalNote: "(note interne)", sentToClient: "(envoyé au client)", you: "Vous", staff: "Staff",
-    editAccountTitle: "Modifier le compte", fieldNewPassword: "Nouveau mot de passe (laisser vide pour garder l'actuel)",
-    maintenanceTitle: "Maintenance", cleanupImagesBtn: "Effacer les images de plus de 5 jours",
-    cleanupNote: "Les images sont aussi effacées automatiquement chaque jour par une tâche planifiée.",
-    cleanupDone: "Terminé — {n} image(s) effacée(s).",
-    savedOk: "Enregistré.",
-  }
+const state = {
+  session: null,
+  isAdmin: false,
+  missions: [],
+  settings: { map_image_url: null, self_destruct: false, self_destruct_message: '' },
+  selectedMissionId: null,
+  placeMode: false,
+  editingMissionId: null,
+  pendingCoords: null,
+  selectedIcon: ICONS[0],
+  missionsChannel: null,
+  settingsChannel: null,
 };
-
-function t(key){
-  const lang = state.lang || 'en';
-  return (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) || TRANSLATIONS.en[key] || key;
-}
-
-function applyTranslations(){
-  document.documentElement.lang = state.lang;
-  document.querySelectorAll('[data-i18n]').forEach(elx=>{ elx.textContent = t(elx.getAttribute('data-i18n')); });
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(elx=>{ elx.setAttribute('placeholder', t(elx.getAttribute('data-i18n-placeholder'))); });
-  document.getElementById('lang-en').classList.toggle('active', state.lang==='en');
-  document.getElementById('lang-fr').classList.toggle('active', state.lang==='fr');
-}
-
-function setLang(lang){
-  state.lang = lang;
-  localStorage.setItem('lang', lang);
-  applyTranslations();
-  if(document.getElementById('app').classList.contains('visible')){
-    renderSidebar();
-    if(document.getElementById('settings-view').classList.contains('visible')) renderSettingsAll();
-    if(state.activeThreadId) renderChatHeader(state.activeThreadId);
-  }
-}
-document.getElementById('lang-en').addEventListener('click', ()=>setLang('en'));
-document.getElementById('lang-fr').addEventListener('click', ()=>setLang('fr'));
-
-/* ============================================================================
-   MATRIX RAIN BACKGROUND
-   ========================================================================== */
-(function matrixRain(){
-  const canvas = document.getElementById('matrix-canvas');
-  const ctx = canvas.getContext('2d');
-  let w,h,cols,drops;
-  const chars = "アイウエオカキクケコサシスセソ0123456789ABCDEF$#%&";
-  function resize(){ w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; cols = Math.floor(w/16); drops = new Array(cols).fill(1); }
-  window.addEventListener('resize', resize);
-  resize();
-  function draw(){
-    ctx.fillStyle = 'rgba(6,9,9,0.08)'; ctx.fillRect(0,0,w,h);
-    ctx.fillStyle = '#00ff9c'; ctx.font = '14px monospace';
-    for(let i=0;i<drops.length;i++){
-      const text = chars[Math.floor(Math.random()*chars.length)];
-      ctx.fillText(text, i*16, drops[i]*16);
-      if(drops[i]*16 > h && Math.random() > 0.975) drops[i] = 0;
-      drops[i]++;
-    }
-  }
-  setInterval(draw, 45);
-})();
-
-/* ============================================================================
-   BOOT SEQUENCE
-   ========================================================================== */
-function bootLines(lang){
-  if(lang === 'fr'){
-    return [
-      ["DÉMARRAGE DU TERMINAL SÉCURISÉ...", false],
-      ["ÉTABLISSEMENT D'UNE LIAISON CHIFFRÉE...", false],
-      ["CONTOURNEMENT DU PARE-FEU... [OK]", true],
-      ["DÉCRYPTAGE DU MODULE D'AUTHENTIFICATION...", false],
-      ["CHARGEMENT DE LA BASE UTILISATEURS...", false],
-      ["VÉRIFICATION DE L'INTÉGRITÉ DU NŒUD... [OK]", true],
-      ["POINT D'ACCÈS PRÊT.", true],
-    ];
-  }
-  return [
-    ["BOOTING SECURE TERMINAL...", false],
-    ["ESTABLISHING ENCRYPTED LINK...", false],
-    ["BYPASSING PERIMETER FIREWALL... [OK]", true],
-    ["DECRYPTING AUTH MODULE...", false],
-    ["LOADING USER DATABASE...", false],
-    ["VERIFYING NODE INTEGRITY... [OK]", true],
-    ["ACCESS POINT READY.", true],
-  ];
-}
-
-function runBootSequence(done){
-  const linesEl = document.getElementById('boot-lines');
-  const bar = document.getElementById('boot-progress-bar');
-  const lines = bootLines(state.lang);
-  let i = 0;
-  function next(){
-    if(i >= lines.length){
-      setTimeout(()=>{ document.getElementById('boot-screen').classList.add('hidden'); setTimeout(done, 550); }, 300);
-      return;
-    }
-    const [text, ok] = lines[i];
-    const div = document.createElement('div');
-    div.className = 'line' + (ok ? '' : ' dim');
-    div.textContent = text;
-    linesEl.appendChild(div);
-    bar.style.width = Math.round(((i+1)/lines.length)*100) + '%';
-    i++;
-    setTimeout(next, 260 + Math.random()*220);
-  }
-  next();
-}
 
 /* ============================================================================
    HELPERS
    ========================================================================== */
-function usernameToEmail(username){
-  const clean = String(username).trim().toLowerCase().replace(/[^a-z0-9_.-]/g,'');
-  return clean + "@chatapp.local";
+function el(html){
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html.trim();
+  return tpl.content.firstElementChild;
 }
 function escapeHtml(str){
   const d = document.createElement('div');
   d.textContent = str == null ? '' : String(str);
   return d.innerHTML;
 }
-function el(html){
-  const tpl = document.createElement('template');
-  tpl.innerHTML = html.trim();
-  return tpl.content.firstElementChild;
-}
-function fmtTime(ts){
-  const d = new Date(ts);
-  return d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-}
-function fmtDay(ts){
-  const d = new Date(ts);
-  const now = new Date();
-  const sameDay = d.toDateString() === now.toDateString();
-  const yesterday = new Date(now); yesterday.setDate(now.getDate()-1);
-  if(sameDay) return state.lang==='fr' ? "Aujourd'hui" : 'Today';
-  if(d.toDateString() === yesterday.toDateString()) return state.lang==='fr' ? 'Hier' : 'Yesterday';
-  return d.toLocaleDateString();
-}
-// "undead_vikings" / "MC - Undead Vikings" -> "Undead Vikings" — strips - and _,
-// collapses whitespace, capitalizes the first letter of each word.
-function prettyName(str){
-  if(!str) return '';
-  return String(str)
-    .replace(/[-_]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .split(' ')
-    .map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : w)
-    .join(' ');
-}
-// lighten/darken a hex color, percent in [-1,1]
-function shadeColor(hex, percent){
-  if(!hex || hex[0] !== '#' || hex.length < 7) return hex;
-  const h = hex.replace('#','');
-  let r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
-  const target = percent < 0 ? 0 : 255;
-  const p = Math.abs(percent);
-  r = Math.round((target - r) * p) + r;
-  g = Math.round((target - g) * p) + g;
-  b = Math.round((target - b) * p) + b;
-  return '#' + [r,g,b].map(x => Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
-}
-function avatarStyle(hex){
-  const light = shadeColor(hex, 0.35), dark = shadeColor(hex, -0.25);
-  return `background:linear-gradient(135deg, ${light}, ${dark}); box-shadow:0 0 10px ${hex}66, inset 0 0 0 1.5px rgba(255,255,255,0.18);`;
-}
+function riskLabel(r){ return { low:'Low', medium:'Medium', high:'High', extreme:'Extreme' }[r] || r; }
+function statusLabel(s){ return { open:'Open', in_progress:'In Progress', completed:'Completed', failed:'Failed' }[s] || s; }
 
-const CATEGORY_ORDER = ["Gang","PF","Orga","MC","SP","Autre"];
+/* ---- Custom modal dialogs (no native confirm()/alert()) ---- */
+let _confirmCallback = null;
+function showAlert(message, danger){
+  document.getElementById('alert-modal-title').textContent = danger ? 'Error' : 'Notice';
+  document.getElementById('alert-modal-msg').textContent = message;
+  document.getElementById('alert-modal').classList.add('visible');
+}
+function showConfirm(message, onConfirm, opts){
+  opts = opts || {};
+  document.getElementById('confirm-modal-title').textContent = opts.title || 'Confirm';
+  document.getElementById('confirm-modal-msg').textContent = message;
+  _confirmCallback = onConfirm;
+  document.getElementById('confirm-modal').classList.add('visible');
+}
+document.getElementById('alert-modal-ok').addEventListener('click', ()=>{
+  document.getElementById('alert-modal').classList.remove('visible');
+});
+document.getElementById('confirm-modal-ok').addEventListener('click', ()=>{
+  document.getElementById('confirm-modal').classList.remove('visible');
+  const cb = _confirmCallback; _confirmCallback = null;
+  if(cb) cb();
+});
+document.getElementById('confirm-modal-cancel').addEventListener('click', ()=>{
+  document.getElementById('confirm-modal').classList.remove('visible');
+  _confirmCallback = null;
+});
 
 /* ============================================================================
-   GLOBAL STATE
+   CLOCK
    ========================================================================== */
-const state = {
-  lang: localStorage.getItem('lang') || 'en',
-  session: null, profile: null, role: null, level: 0,
-  mode: 'solo', // 'full' | 'scoped' | 'solo'
-  grantedCategoryIds: [],
-  roles: [], categories: [], subcategories: [], roleCategories: [],
-  threads: [], accounts: [],
-  myThreadId: null,
-  activeCategoryId: null, activeThreadId: null,
-  editingRoleId: null, editingCategoryId: null,
-  msgChannel: null,
-};
+function tickClock(){
+  document.getElementById('topbar-clock').textContent = new Date().toLocaleTimeString([], { hour12:false });
+}
+setInterval(tickClock, 1000);
 
 /* ============================================================================
-   AUTH
+   HACK SEQUENCE
    ========================================================================== */
-async function attemptLogin(){
-  const username = document.getElementById('login-username').value.trim();
-  const password = document.getElementById('login-password').value;
-  const errEl = document.getElementById('login-error');
-  const btn = document.getElementById('login-btn');
-  errEl.textContent = '';
-  if(!username || !password){ errEl.textContent = t('errFields'); return; }
-  btn.disabled = true; btn.textContent = t('loginConnecting');
-  const email = usernameToEmail(username);
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  btn.disabled = false; btn.textContent = t('loginBtn');
-  if(error){ errEl.textContent = t('errInvalidCreds'); return; }
-  await onAuthed(data.session);
-}
-
-async function onAuthed(session){
-  state.session = session;
-  const { data: profile, error } = await sb.from('profiles').select('*, roles(*)').eq('id', session.user.id).single();
-  if(error || !profile){ document.getElementById('login-error').textContent = t('errNoProfile'); await sb.auth.signOut(); return; }
-  if(!profile.is_active){ document.getElementById('login-error').textContent = t('errDisabled'); await sb.auth.signOut(); return; }
-  state.profile = profile; state.role = profile.roles || null; state.level = state.role ? state.role.level : 0;
-  document.getElementById('login-screen').classList.remove('visible');
-  await loadApp();
-}
-
-async function logout(){
-  if(state.msgChannel){ sb.removeChannel(state.msgChannel); state.msgChannel = null; }
-  await sb.auth.signOut();
-  location.reload();
+const HACK_LINES = [
+  ["INITIATING SOVEREIGN UPLINK...", null],
+  ["PROBING PERIMETER DEFENSES...", null],
+  ["ATELIS NETWORK ACCESS ... [BLOCKED]", 'blocked'],
+  ["CERBERUS ICE COUNTERMEASURES ... [BLOCKED]", 'blocked'],
+  ["REROUTING TRAFFIC THROUGH GHOST RELAYS...", null],
+  ["ESTABLISHING SECURE CHANNEL...", null],
+  ["ENCRYPTION HANDSHAKE COMPLETE", 'ok'],
+  ["UPLINK ACTIVE — WELCOME, OPERATIVE", 'ok'],
+];
+function runHackSequence(done){
+  document.getElementById('splash-screen').classList.add('hidden-el');
+  const screen = document.getElementById('hack-screen');
+  const linesEl = document.getElementById('hack-lines');
+  const bar = document.getElementById('hack-progress-bar');
+  linesEl.innerHTML = ''; bar.style.width = '0%';
+  screen.classList.add('visible');
+  let i = 0;
+  function next(){
+    if(i >= HACK_LINES.length){
+      setTimeout(()=>{ screen.classList.remove('visible'); done(); }, 400);
+      return;
+    }
+    const [text, cls] = HACK_LINES[i];
+    const div = document.createElement('div');
+    div.className = 'line' + (cls ? ' ' + cls : '');
+    div.textContent = text;
+    linesEl.appendChild(div);
+    bar.style.width = Math.round(((i+1)/HACK_LINES.length)*100) + '%';
+    i++;
+    setTimeout(next, 320 + Math.random()*280);
+  }
+  next();
 }
 
 /* ============================================================================
-   APP BOOTSTRAP
+   SETTINGS / LOCKOUT
    ========================================================================== */
-async function loadApp(){
-  const { data: myThread } = await sb.from('threads').select('id').eq('client_id', state.profile.id).maybeSingle();
-  state.myThreadId = myThread ? myThread.id : null;
-
-  if(state.role && state.level < 6){
-    const { data: grants } = await sb.from('role_categories').select('category_id').eq('role_id', state.role.id);
-    state.grantedCategoryIds = (grants || []).map(g=>g.category_id);
-  } else {
-    state.grantedCategoryIds = [];
-  }
-  state.mode = state.level >= 6 ? 'full' : (state.grantedCategoryIds.length > 0 ? 'scoped' : 'solo');
-
-  document.getElementById('app').classList.add('visible');
-  document.getElementById('who-name').textContent = state.profile.display_name || state.profile.username;
-  document.getElementById('who-level').textContent = (state.role ? state.role.name + ' — lvl ' + state.role.level : '—');
-
-  await refreshAllData();
-  applyTranslations();
-  renderSidebar();
-
-  if(state.mode === 'solo' && state.myThreadId) openThread(state.myThreadId);
+async function loadSettings(){
+  const { data, error } = await sb.from('app_settings').select('*').eq('id', 1).maybeSingle();
+  if(!error && data) state.settings = data;
 }
-
-async function refreshAllData(){
-  const queries = [
-    sb.from('categories').select('*'),
-    sb.from('subcategories').select('*'),
-    sb.from('threads').select('*'),
-  ];
-  if(state.mode === 'full'){
-    queries.push(sb.from('roles').select('*').order('level', { ascending:false }));
-    queries.push(sb.from('profiles').select('*, roles(name,level)'));
-    queries.push(sb.from('role_categories').select('*'));
-  }
-  const results = await Promise.all(queries);
-  state.categories = ((results[0].data) || []).slice().sort((a,b)=> CATEGORY_ORDER.indexOf(a.name) - CATEGORY_ORDER.indexOf(b.name));
-  state.subcategories = results[1].data || [];
-  state.threads = results[2].data || [];
-  if(state.mode === 'full'){
-    state.roles = results[3].data || [];
-    state.accounts = results[4].data || [];
-    state.roleCategories = results[5].data || [];
-  } else {
-    state.roles = []; state.accounts = []; state.roleCategories = [];
-  }
-  if(state.mode === 'full') renderSettingsRefs();
+function showLockout(){
+  document.getElementById('splash-screen').classList.add('hidden-el');
+  document.getElementById('hack-screen').classList.remove('visible');
+  document.getElementById('tablet-app').classList.remove('visible');
+  document.getElementById('lockout-msg').textContent = state.settings.self_destruct_message || 'SOVEREIGN UPLINK SEVERED';
+  document.getElementById('lockout-screen').classList.add('visible');
 }
-
-function myPerm(key){
-  if(!state.role) return false;
-  if(state.role.level >= 9) return true;
-  return !!state.role[key];
+function hideLockout(){
+  document.getElementById('lockout-screen').classList.remove('visible');
 }
-
-/* ============================================================================
-   AVATARS / NAMES
-   ========================================================================== */
-function categoryForAccountId(accId){
-  const th = state.threads.find(t=>t.client_id===accId);
-  if(!th) return null;
-  return state.categories.find(c=>c.id===th.category_id) || null;
-}
-function avatarFor(accLike){
-  const cat = categoryForAccountId(accLike.id);
-  const color = accLike.avatar_color || (cat ? cat.color : null) || '#00ff9c';
-  let letter;
-  if(cat) letter = cat.name.charAt(0).toUpperCase();
-  else if(accLike.roles && accLike.roles.name) letter = accLike.roles.name.charAt(0).toUpperCase();
-  else letter = (accLike.username || '?').charAt(0).toUpperCase();
-  return { color, letter };
-}
-function avatarForMessage(m, threadId, fullView){
-  if(fullView){
-    const acc = (m.sender_id === state.profile.id) ? state.profile : (state.accounts.find(a=>a.id===m.sender_id) || { id:m.sender_id, username:m.sender_username });
-    return avatarFor(acc);
-  }
-  const mine = m.sender_id === state.profile.id;
-  if(mine) return avatarFor(state.profile);
-  const th = state.threads.find(t=>t.id===threadId);
-  const cat = th ? state.categories.find(c=>c.id===th.category_id) : null;
-  return { color: cat ? cat.color : '#39d0ff', letter: cat ? cat.name.charAt(0).toUpperCase() : 'S' };
-}
-
-/* ============================================================================
-   SIDEBAR
-   ========================================================================== */
-function renderSidebar(){
-  const nav = document.getElementById('sidebar-nav');
-  nav.innerHTML = '';
-
-  if(state.mode === 'full'){
-    const settingsItem = el(`<div class="nav-item settings" data-nav="settings">${escapeHtml(t('settingsNav'))}</div>`);
-    settingsItem.onclick = () => openSettings();
-    nav.appendChild(settingsItem);
-  }
-  if(state.mode !== 'full' && state.myThreadId){
-    const mine = el(`<div class="nav-item mychat" data-nav="mychat">${escapeHtml(t('myChat'))}</div>`);
-    mine.onclick = () => openThread(state.myThreadId);
-    nav.appendChild(mine);
-  }
-
-  const visibleCategories = state.mode === 'full' ? state.categories : state.categories.filter(c => state.grantedCategoryIds.includes(c.id));
-  visibleCategories.forEach(cat=>{
-    const wrap = document.createElement('div');
-    const head = el(`<div class="nav-item" data-cat="${cat.id}">${escapeHtml(cat.name)}</div>`);
-    head.onclick = () => toggleCategory(cat.id, wrap);
-    wrap.appendChild(head);
-    const children = document.createElement('div');
-    children.className = 'cat-children hidden-el';
-    children.dataset.children = cat.id;
-    wrap.appendChild(children);
-    nav.appendChild(wrap);
-  });
-}
-
-function toggleCategory(catId, wrap){
-  const children = wrap.querySelector('.cat-children');
-  const isOpen = !children.classList.contains('hidden-el');
-  document.querySelectorAll('.cat-children').forEach(c=>c.classList.add('hidden-el'));
-  document.querySelectorAll('.nav-item[data-cat]').forEach(n=>n.classList.remove('active'));
-  if(isOpen) return;
-  children.classList.remove('hidden-el');
-  wrap.querySelector('.nav-item').classList.add('active');
-  renderCategoryChildren(catId, children);
-}
-
-function renderCategoryChildren(catId, container){
-  container.innerHTML = '';
-  const subcats = state.subcategories.filter(s=>s.category_id === catId);
-  const threadsDirect = state.threads.filter(t=>t.category_id===catId && !t.subcategory_id);
-  threadsDirect.forEach(t=> container.appendChild(threadRow(t)));
-  subcats.forEach(sc=>{
-    container.appendChild(el(`<div class="subcat-label">${escapeHtml(sc.name)}</div>`));
-    const scThreads = state.threads.filter(t=>t.subcategory_id === sc.id);
-    if(scThreads.length === 0){
-      container.appendChild(el(`<div class="thread-item" style="opacity:.5;cursor:default;">${escapeHtml(t('empty'))}</div>`));
-    }
-    scThreads.forEach(t=> container.appendChild(threadRow(t)));
-  });
-  if(subcats.length===0 && threadsDirect.length===0){
-    container.appendChild(el(`<div class="thread-item" style="opacity:.5;cursor:default;">${escapeHtml(t('noChatsYet'))}</div>`));
-  }
-}
-
-function threadLabel(th){
-  const acc = state.accounts.find(a=>a.id === th.client_id);
-  if(acc) return prettyName(acc.username);
-  if(th.client_id === state.profile.id) return prettyName(state.profile.username);
-  return prettyName(th.title) || 'chat';
-}
-
-function threadRow(th){
-  const acc = state.accounts.find(a=>a.id === th.client_id);
-  const label = threadLabel(th);
-  const inactive = acc && !acc.is_active;
-  const row = el(`<div class="thread-item ${inactive?'inactive':''}" data-thread="${th.id}"><span class="dot"></span><span>${escapeHtml(label)}</span></div>`);
-  row.onclick = (e)=>{ e.stopPropagation(); openThread(th.id); };
-  return row;
-}
-
-function openSettings(){
-  state.activeThreadId = null;
-  document.getElementById('main-empty').style.display = 'none';
-  document.getElementById('chat-view').classList.remove('visible');
-  document.getElementById('settings-view').classList.add('visible');
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const s = document.querySelector('.nav-item.settings');
-  if(s) s.classList.add('active');
-  renderSettingsAll();
-}
-
-/* -------- Settings: reference dropdowns -------- */
-function renderSettingsRefs(){
-  const roleSel = document.getElementById('new-acc-role');
-  roleSel.innerHTML = `<option value="">${escapeHtml(t('roleDefaultOption'))}</option>` + state.roles
-    .filter(r=>r.level < 9)
-    .map(r=>`<option value="${r.id}">${escapeHtml(r.name)} (lvl ${r.level})</option>`)
-    .join('');
-
-  const catSel = document.getElementById('new-acc-category');
-  catSel.innerHTML = state.categories.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-  catSel.onchange = updateNewAccSubcats;
-  updateNewAccSubcats();
-
-  document.getElementById('new-subcat-parent').innerHTML = state.categories.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-
-  const grid = document.getElementById('new-role-categories');
-  grid.innerHTML = state.categories.map(c=>`<label><input type="checkbox" class="role-cat-check" value="${c.id}"> ${escapeHtml(c.name)}</label>`).join('');
-}
-
-function updateNewAccSubcats(){
-  const catId = document.getElementById('new-acc-category').value;
-  const subs = state.subcategories.filter(s=>s.category_id === catId);
-  document.getElementById('new-acc-subcategory').innerHTML = '<option value="">—</option>' + subs.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
-}
-
-function renderSettingsAll(){
-  renderSettingsRefs();
-  renderAccountsTable();
-  renderRolesTable();
-  renderCategoriesTable();
-  const canManage = state.level >= 9;
-  document.getElementById('create-account-card').style.display = canManage ? '' : 'none';
-  document.getElementById('maintenance-card').style.display = canManage ? '' : 'none';
-  document.getElementById('create-category-card').style.display = canManage ? '' : 'none';
-  document.querySelectorAll('#tab-roles .panel-card').forEach(c=> c.style.display = canManage ? '' : 'none');
-}
-
-function renderAccountsTable(){
-  const tbody = document.getElementById('accounts-table-body');
-  tbody.innerHTML = '';
-  const canManage = state.level >= 9;
-  state.accounts.slice().sort((a,b)=> (a.username<b.username?-1:1)).forEach(acc=>{
-    const roleLabel = acc.roles ? `${acc.roles.name} (lvl ${acc.roles.level})` : '—';
-    const th = state.threads.find(th2=>th2.client_id===acc.id);
-    let catLabel = '—';
-    if(th){
-      const cat = state.categories.find(c=>c.id===th.category_id);
-      const sc = state.subcategories.find(s=>s.id===th.subcategory_id);
-      catLabel = (cat?cat.name:'—') + (sc? ' / '+sc.name : '');
-    }
-    const isFounder = acc.username === 'admin' || acc.username === 'ramsey';
-    const av = avatarFor(acc);
-    const row = el(`<tr>
-      <td></td>
-      <td>${escapeHtml(prettyName(acc.username))}</td>
-      <td>${escapeHtml(roleLabel)}</td>
-      <td>${escapeHtml(catLabel)}</td>
-      <td>${escapeHtml(acc.business || '—')}</td>
-      <td><span class="pill ${acc.is_active?'on':''}">${acc.is_active?t('active'):t('disabled')}</span></td>
-      <td class="row-actions"></td>
-    </tr>`);
-    const avatarTd = row.children[0];
-    const swatch = el(`<span class="swatch-btn" style="${avatarStyle(av.color)}" title="${escapeHtml(av.letter)}"></span>`);
-    avatarTd.appendChild(swatch);
-    const actionsTd = row.querySelector('.row-actions');
-    if(canManage){
-      const editBtn = el(`<button class="btn secondary small">${escapeHtml(t('editBtn2'))}</button>`);
-      editBtn.onclick = ()=> openEditAccountModal(acc);
-      actionsTd.appendChild(editBtn);
-      if(acc.id !== state.profile.id){
-        const kickBtn = el(`<button class="btn secondary small">${acc.is_active?escapeHtml(t('kick')):escapeHtml(t('restore'))}</button>`);
-        kickBtn.onclick = ()=> toggleActive(acc);
-        actionsTd.appendChild(kickBtn);
-        if(!isFounder){
-          const delBtn = el(`<button class="btn danger small">${escapeHtml(t('deleteBtn'))}</button>`);
-          delBtn.onclick = ()=> deleteAccount(acc);
-          actionsTd.appendChild(delBtn);
-        }
-      }
-    }
-    if(actionsTd.children.length === 0){ actionsTd.innerHTML = '<span style="color:var(--dim)">—</span>'; }
-    tbody.appendChild(row);
-  });
-}
-
-function renderRolesTable(){
-  const tbody = document.getElementById('roles-table-body');
-  tbody.innerHTML = '';
-  const canManage = state.level >= 9;
-  state.roles.forEach(r=>{
-    const grantedNames = state.roleCategories.filter(rc=>rc.role_id===r.id)
-      .map(rc=>{ const c = state.categories.find(cc=>cc.id===rc.category_id); return c?c.name:null; }).filter(Boolean);
-    const catText = r.level>=6 ? 'ALL' : (grantedNames.join(', ') || '—');
-    const row = el(`<tr>
-      <td>${escapeHtml(r.name)}</td>
-      <td>${r.level}</td>
-      <td><span class="pill ${r.can_write?'on':''}">${r.can_write?t('yes'):t('no')}</span></td>
-      <td><span class="pill ${r.can_move_chats?'on':''}">${r.can_move_chats?t('yes'):t('no')}</span></td>
-      <td><span class="pill ${r.can_make_subcategories?'on':''}">${r.can_make_subcategories?t('yes'):t('no')}</span></td>
-      <td><span class="pill ${r.can_kick?'on':''}">${r.can_kick?t('yes'):t('no')}</span></td>
-      <td><span class="pill ${r.can_delete?'on':''}">${r.can_delete?t('yes'):t('no')}</span></td>
-      <td>${escapeHtml(catText)}</td>
-      <td></td>
-    </tr>`);
-    if(canManage && r.level < 9){
-      const editBtn = el(`<button class="btn secondary small">${escapeHtml(t('editBtn'))}</button>`);
-      editBtn.onclick = ()=> startEditRole(r);
-      row.lastElementChild.appendChild(editBtn);
-    } else {
-      row.lastElementChild.innerHTML = '<span style="color:var(--dim)">—</span>';
-    }
-    tbody.appendChild(row);
-  });
-}
-
-function startEditRole(role){
-  state.editingRoleId = role.id;
-  document.getElementById('role-form-title').textContent = t('editRoleTitle');
-  document.getElementById('new-role-name').value = role.name;
-  document.getElementById('new-role-level').value = role.level;
-  document.getElementById('perm-write').checked = role.can_write;
-  document.getElementById('perm-move').checked = role.can_move_chats;
-  document.getElementById('perm-subcat').checked = role.can_make_subcategories;
-  document.getElementById('perm-kick').checked = role.can_kick;
-  document.getElementById('perm-delete').checked = role.can_delete;
-  const granted = state.roleCategories.filter(rc=>rc.role_id===role.id).map(rc=>rc.category_id);
-  document.querySelectorAll('.role-cat-check').forEach(cb=>{ cb.checked = granted.includes(cb.value); });
-  document.getElementById('create-role-btn').textContent = t('saveChangesBtn');
-  document.getElementById('cancel-edit-role-btn').classList.remove('hidden-el');
-  document.getElementById('tab-roles').scrollIntoView({behavior:'smooth'});
-}
-
-function cancelEditRole(){
-  state.editingRoleId = null;
-  document.getElementById('role-form-title').textContent = t('createRoleTitle');
-  document.getElementById('new-role-name').value = '';
-  document.getElementById('new-role-level').value = 1;
-  document.getElementById('perm-write').checked = true;
-  document.getElementById('perm-move').checked = false;
-  document.getElementById('perm-subcat').checked = false;
-  document.getElementById('perm-kick').checked = false;
-  document.getElementById('perm-delete').checked = false;
-  document.querySelectorAll('.role-cat-check').forEach(cb=> cb.checked = false);
-  document.getElementById('create-role-btn').textContent = t('createRoleBtn');
-  document.getElementById('cancel-edit-role-btn').classList.add('hidden-el');
-}
-document.getElementById('cancel-edit-role-btn').addEventListener('click', cancelEditRole);
-
-function renderCategoriesTable(){
-  const tbody = document.getElementById('categories-table-body');
-  tbody.innerHTML = '';
-  const canManage = state.level >= 9;
-  state.categories.forEach(c=>{
-    const subs = state.subcategories.filter(s=>s.category_id===c.id).map(s=>s.name).join(', ') || '—';
-    const swatch = `<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${escapeHtml(c.color||'#00ff9c')};border:1px solid var(--border);"></span>`;
-    const webhookLabel = c.webhook_url ? '✅' : '—';
-    const row = el(`<tr><td>${swatch}</td><td>${escapeHtml(c.name)}</td><td>${escapeHtml(subs)}</td><td>${webhookLabel}</td><td></td></tr>`);
-    if(canManage){
-      const editBtn = el(`<button class="btn secondary small">${escapeHtml(t('editBtn2'))}</button>`);
-      editBtn.onclick = ()=> startEditCategory(c);
-      row.lastElementChild.appendChild(editBtn);
-    } else {
-      row.lastElementChild.innerHTML = '<span style="color:var(--dim)">—</span>';
-    }
-    tbody.appendChild(row);
-  });
-}
-
-/* -------- Settings: tabs -------- */
-document.querySelectorAll('.tab').forEach(tab=>{
-  tab.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab').forEach(tb=>tb.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
-  });
-});
-
-document.getElementById('create-account-btn').addEventListener('click', async ()=>{
-  const errEl = document.getElementById('create-account-error');
-  const okEl = document.getElementById('create-account-success');
-  errEl.textContent = ''; okEl.textContent = '';
-  const username = document.getElementById('new-acc-username').value.trim();
-  const password = document.getElementById('new-acc-password').value;
-  const roleId = document.getElementById('new-acc-role').value;
-  const categoryId = document.getElementById('new-acc-category').value;
-  const subcategoryId = document.getElementById('new-acc-subcategory').value;
-  const business = document.getElementById('new-acc-business').value.trim();
-  const avatarColor = document.getElementById('new-acc-color').value;
-
-  if(!username || !password){ errEl.textContent = 'Username and password required.'; return; }
-  if(!categoryId){ errEl.textContent = 'Category required.'; return; }
-
-  const body = { username, password, categoryId, subcategoryId: subcategoryId || null, displayName: username, avatarColor };
-  if(roleId) body.roleId = roleId;
-  if(business) body.business = business;
-
-  let res, json;
-  try{
-    res = await fetch('/api/create-account', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+state.session.access_token },
-      body: JSON.stringify(body)
-    });
-    json = await res.json();
-  } catch(e){
-    errEl.textContent = 'NETWORK ERROR: could not reach /api/create-account. Is it deployed? (' + e.message + ')';
-    return;
-  }
-  if(!res.ok){
-    errEl.textContent = 'ERROR (' + res.status + '): ' + (json && json.error ? json.error : 'unknown error');
-    console.error('create-account failed', res.status, json);
-    return;
-  }
-  okEl.textContent = 'Account "' + json.username + '" created.';
-  document.getElementById('new-acc-username').value = '';
-  document.getElementById('new-acc-password').value = '';
-  document.getElementById('new-acc-business').value = '';
-  await refreshAllData();
-  renderSidebar();
-  renderSettingsAll();
-});
-
-document.getElementById('create-role-btn').addEventListener('click', async ()=>{
-  const errEl = document.getElementById('create-role-error');
-  errEl.textContent = '';
-  const name = document.getElementById('new-role-name').value.trim();
-  let level = parseInt(document.getElementById('new-role-level').value, 10);
-  if(!name){ errEl.textContent = 'Name required.'; return; }
-  if(!(level>=1 && level<=8)){ errEl.textContent = 'Level must be between 1 and 8.'; return; }
-
-  const payload = {
-    name, level,
-    can_write: document.getElementById('perm-write').checked,
-    can_move_chats: document.getElementById('perm-move').checked,
-    can_make_subcategories: document.getElementById('perm-subcat').checked,
-    can_kick: document.getElementById('perm-kick').checked,
-    can_delete: document.getElementById('perm-delete').checked,
-  };
-  const selectedCats = Array.from(document.querySelectorAll('.role-cat-check:checked')).map(cb=>cb.value);
-
-  let roleId = state.editingRoleId;
-  if(roleId){
-    const { error } = await sb.from('roles').update(payload).eq('id', roleId);
-    if(error){ errEl.textContent = 'ERROR: ' + error.message; return; }
-    await sb.from('role_categories').delete().eq('role_id', roleId);
-  } else {
-    const { data, error } = await sb.from('roles').insert(payload).select('id').single();
-    if(error){ errEl.textContent = 'ERROR: ' + error.message; return; }
-    roleId = data.id;
-  }
-  if(selectedCats.length){
-    const rows = selectedCats.map(catId=>({ role_id: roleId, category_id: catId }));
-    const { error: rcErr } = await sb.from('role_categories').insert(rows);
-    if(rcErr){ errEl.textContent = 'Role saved, but category grants failed: ' + rcErr.message; }
-  }
-  cancelEditRole();
-  await refreshAllData();
-  renderSettingsAll();
-});
-
-function startEditCategory(cat){
-  state.editingCategoryId = cat.id;
-  document.getElementById('cat-form-title').textContent = t('editCategoryTitle');
-  document.getElementById('new-cat-name').value = cat.name;
-  document.getElementById('new-cat-color').value = cat.color || '#00ff9c';
-  document.getElementById('new-cat-webhook').value = cat.webhook_url || '';
-  document.getElementById('create-cat-btn').textContent = t('saveChangesBtn');
-  document.getElementById('cancel-edit-cat-btn').classList.remove('hidden-el');
-}
-function cancelEditCategory(){
-  state.editingCategoryId = null;
-  document.getElementById('cat-form-title').textContent = t('createCategoryTitle');
-  document.getElementById('new-cat-name').value = '';
-  document.getElementById('new-cat-color').value = '#00ff9c';
-  document.getElementById('new-cat-webhook').value = '';
-  document.getElementById('create-cat-btn').textContent = t('addBtn');
-  document.getElementById('cancel-edit-cat-btn').classList.add('hidden-el');
-}
-document.getElementById('cancel-edit-cat-btn').addEventListener('click', cancelEditCategory);
-
-document.getElementById('create-cat-btn').addEventListener('click', async ()=>{
-  const errEl = document.getElementById('create-cat-error');
-  errEl.textContent = '';
-  const name = document.getElementById('new-cat-name').value.trim();
-  const color = document.getElementById('new-cat-color').value;
-  const webhook_url = document.getElementById('new-cat-webhook').value.trim() || null;
-  if(!name){ errEl.textContent = 'Name required.'; return; }
-  let error;
-  if(state.editingCategoryId){
-    ({ error } = await sb.from('categories').update({ name, color, webhook_url }).eq('id', state.editingCategoryId));
-  } else {
-    ({ error } = await sb.from('categories').insert({ name, color, webhook_url }));
-  }
-  if(error){ errEl.textContent = 'ERROR: ' + error.message; return; }
-  cancelEditCategory();
-  await refreshAllData();
-  renderSidebar();
-  renderSettingsAll();
-});
-
-document.getElementById('create-subcat-btn').addEventListener('click', async ()=>{
-  const errEl = document.getElementById('create-subcat-error');
-  errEl.textContent = '';
-  const catId = document.getElementById('new-subcat-parent').value;
-  const name = document.getElementById('new-subcat-name').value.trim();
-  if(!name){ errEl.textContent = 'Name required.'; return; }
-  const { error } = await sb.from('subcategories').insert({ category_id: catId, name });
-  if(error){ errEl.textContent = 'ERROR: ' + error.message; return; }
-  document.getElementById('new-subcat-name').value = '';
-  await refreshAllData();
-  renderSidebar();
-  renderSettingsAll();
-});
-
-async function toggleActive(acc){
-  const { error } = await sb.from('profiles').update({ is_active: !acc.is_active }).eq('id', acc.id);
-  if(error){ alert('ERROR: ' + error.message); return; }
-  await refreshAllData();
-  renderSidebar();
-  renderSettingsAll();
-}
-
-async function deleteAccount(acc){
-  if(!confirm(t('confirmDelete').replace('{u}', acc.username))) return;
-  const res = await fetch('/api/delete-account', {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+state.session.access_token },
-    body: JSON.stringify({ targetId: acc.id })
-  });
-  const json = await res.json();
-  if(!res.ok){ alert('ERROR: ' + json.error); return; }
-  if(state.activeThreadId){
-    const th = state.threads.find(x=>x.id===state.activeThreadId);
-    if(th && th.client_id === acc.id){
-      state.activeThreadId = null;
-      document.getElementById('chat-view').classList.remove('visible');
-      document.getElementById('main-empty').style.display='block';
-    }
-  }
-  await refreshAllData();
-  renderSidebar();
-  renderSettingsAll();
-}
-
-/* -------- Edit Account modal -------- */
-let editAccountTarget = null;
-
-function updateEditAccSubcats(selectedId){
-  const catId = document.getElementById('edit-acc-category').value;
-  const subs = state.subcategories.filter(s=>s.category_id===catId);
-  document.getElementById('edit-acc-subcategory').innerHTML = '<option value="">—</option>' + subs.map(s=>`<option value="${s.id}" ${s.id===selectedId?'selected':''}>${escapeHtml(s.name)}</option>`).join('');
-}
-
-function openEditAccountModal(acc){
-  editAccountTarget = acc;
-  document.getElementById('edit-acc-username').value = acc.username;
-  document.getElementById('edit-acc-password').value = '';
-  document.getElementById('edit-acc-business').value = acc.business || '';
-  document.getElementById('edit-acc-color').value = acc.avatar_color || avatarFor(acc).color || '#00ff9c';
-
-  const roleSel = document.getElementById('edit-acc-role');
-  roleSel.innerHTML = state.roles.filter(r=>r.level<9 || r.id===acc.role_id)
-    .map(r=>`<option value="${r.id}" ${r.id===acc.role_id?'selected':''}>${escapeHtml(r.name)} (lvl ${r.level})</option>`).join('');
-
-  const th = state.threads.find(t2=>t2.client_id===acc.id);
-  const catSel = document.getElementById('edit-acc-category');
-  catSel.innerHTML = state.categories.map(c=>`<option value="${c.id}" ${th && th.category_id===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
-  updateEditAccSubcats(th ? th.subcategory_id : null);
-  catSel.onchange = ()=> updateEditAccSubcats(null);
-
-  document.getElementById('edit-acc-error').textContent = '';
-  document.getElementById('edit-acc-success').textContent = '';
-  document.getElementById('edit-account-modal').classList.add('visible');
-}
-
-function closeEditAccountModal(){
-  document.getElementById('edit-account-modal').classList.remove('visible');
-  editAccountTarget = null;
-}
-document.getElementById('edit-acc-cancel-btn').addEventListener('click', closeEditAccountModal);
-
-document.getElementById('edit-acc-save-btn').addEventListener('click', async ()=>{
-  const errEl = document.getElementById('edit-acc-error');
-  const okEl = document.getElementById('edit-acc-success');
-  errEl.textContent = ''; okEl.textContent = '';
-  if(!editAccountTarget) return;
-
-  const body = {
-    targetId: editAccountTarget.id,
-    username: document.getElementById('edit-acc-username').value.trim(),
-    business: document.getElementById('edit-acc-business').value.trim(),
-    avatarColor: document.getElementById('edit-acc-color').value,
-    roleId: document.getElementById('edit-acc-role').value,
-    categoryId: document.getElementById('edit-acc-category').value,
-    subcategoryId: document.getElementById('edit-acc-subcategory').value || null,
-  };
-  const pw = document.getElementById('edit-acc-password').value;
-  if(pw) body.password = pw;
-
-  let res, json;
-  try{
-    res = await fetch('/api/update-account', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+state.session.access_token },
-      body: JSON.stringify(body)
-    });
-    json = await res.json();
-  } catch(e){ errEl.textContent = 'NETWORK ERROR: ' + e.message; return; }
-  if(!res.ok){ errEl.textContent = 'ERROR (' + res.status + '): ' + (json && json.error ? json.error : 'unknown'); return; }
-
-  okEl.textContent = t('savedOk');
-  await refreshAllData();
-  renderSidebar();
-  renderSettingsAll();
-  setTimeout(closeEditAccountModal, 500);
-});
-
-/* -------- Maintenance: image cleanup -------- */
-document.getElementById('cleanup-images-btn').addEventListener('click', async ()=>{
-  const errEl = document.getElementById('cleanup-error');
-  const okEl = document.getElementById('cleanup-success');
-  errEl.textContent = ''; okEl.textContent = '';
-  let res, json;
-  try{
-    res = await fetch('/api/cleanup-images', {
-      method:'POST',
-      headers:{ 'Authorization':'Bearer '+state.session.access_token }
-    });
-    json = await res.json();
-  } catch(e){ errEl.textContent = 'NETWORK ERROR: ' + e.message; return; }
-  if(!res.ok){ errEl.textContent = 'ERROR: ' + (json && json.error ? json.error : 'unknown'); return; }
-  okEl.textContent = t('cleanupDone').replace('{n}', json.cleared != null ? json.cleared : 0);
-});
-
-/* -------- Chat -------- */
-function isOwnThread(threadId){
-  const th = state.threads.find(x=>x.id===threadId);
-  return th && th.client_id === state.profile.id;
-}
-
-async function openThread(threadId){
-  state.activeThreadId = threadId;
-  document.getElementById('settings-view').classList.remove('visible');
-  document.getElementById('main-empty').style.display = 'none';
-  document.getElementById('chat-view').classList.add('visible');
-  document.querySelectorAll('.thread-item, .nav-item.mychat').forEach(n=>n.classList.remove('active'));
-  document.querySelectorAll(`.thread-item[data-thread="${threadId}"]`).forEach(n=>n.classList.add('active'));
-  if(isOwnThread(threadId)){ const mc = document.querySelector('.nav-item.mychat'); if(mc) mc.classList.add('active'); }
-
-  renderChatHeader(threadId);
-  await loadMessagesForThread(threadId);
-  subscribeToThread(threadId);
-}
-
-function renderChatHeader(threadId){
-  const th = state.threads.find(x=>x.id===threadId);
-  if(!th) return;
-  const own = isOwnThread(threadId);
-  document.getElementById('chat-title').textContent = threadLabel(th);
-  const cat = state.categories.find(c=>c.id===th.category_id);
-  const sc = state.subcategories.find(s=>s.id===th.subcategory_id);
-  const acc = state.accounts.find(a=>a.id===th.client_id);
-  document.getElementById('chat-meta').textContent = (cat?cat.name:'') + (sc?' / '+sc.name:'') + (acc && !acc.is_active ? '  [DISABLED]' : '');
-
-  const canReplyHere = own || (state.level >= 6 && myPerm('can_write'));
-
-  const canMove = state.mode==='full' && myPerm('can_move_chats');
-  const moveSel = document.getElementById('chat-move-select');
-  moveSel.classList.toggle('hidden-el', !canMove);
-  if(canMove){
-    let opts = [];
-    state.categories.forEach(c=>{
-      opts.push(`<option value="cat:${c.id}" ${th.category_id===c.id && !th.subcategory_id?'selected':''}>${escapeHtml(c.name)}</option>`);
-      state.subcategories.filter(s=>s.category_id===c.id).forEach(s=>{
-        opts.push(`<option value="sub:${s.id}:${c.id}" ${th.subcategory_id===s.id?'selected':''}>${escapeHtml(c.name)} / ${escapeHtml(s.name)}</option>`);
-      });
-    });
-    moveSel.innerHTML = opts.join('');
-    moveSel.onchange = async ()=>{
-      const [kind, id, parentCat] = moveSel.value.split(':');
-      const update = kind==='cat' ? { category_id:id, subcategory_id:null } : { category_id:parentCat, subcategory_id:id };
-      const { error } = await sb.from('threads').update(update).eq('id', threadId);
-      if(error){ alert('ERROR: '+error.message); return; }
-      await refreshAllData();
-      renderSidebar();
-    };
-  }
-
-  const canKick = state.mode==='full' && myPerm('can_kick') && !own;
-  const kickBtn = document.getElementById('chat-kick-btn');
-  kickBtn.classList.toggle('hidden-el', !canKick);
-  kickBtn.textContent = acc && acc.is_active ? t('kick') : t('restore');
-  kickBtn.onclick = ()=> acc && toggleActive(acc);
-
-  const canDelete = state.mode==='full' && myPerm('can_delete') && !own;
-  const delBtn = document.getElementById('chat-delete-btn');
-  delBtn.classList.toggle('hidden-el', !canDelete);
-  delBtn.onclick = ()=> acc && deleteAccount(acc);
-
-  document.getElementById('chat-input').disabled = !canReplyHere;
-  document.getElementById('chat-send-btn').disabled = !canReplyHere;
-  document.getElementById('chat-input-row').classList.toggle('hidden-el', !canReplyHere);
-  document.getElementById('chat-readonly-note').classList.toggle('hidden-el', canReplyHere);
-  document.getElementById('reply-toggle-wrap').classList.toggle('hidden-el', own || !canReplyHere);
-  document.getElementById('chat-input').setAttribute('placeholder', own ? t('chatPlaceholderOwn') : t('chatPlaceholderStaff'));
-}
-
-async function loadMessagesForThread(threadId){
-  const { data, error } = await sb.from('messages').select('*').eq('thread_id', threadId).order('created_at', { ascending:true });
-  if(error){ console.error(error); return; }
-  renderMessages(data || [], threadId);
-}
-
-function renderMessages(msgs, threadId){
-  const container = document.getElementById('chat-messages');
-  const fullView = state.mode === 'full';
-  container.innerHTML = '';
-
-  let lastDay = null, lastSenderKey = null, lastTs = 0;
-
-  msgs.forEach(m=>{
-    const mine = m.sender_id === state.profile.id;
-    const day = fmtDay(m.created_at);
-    if(day !== lastDay){
-      container.appendChild(el(`<div class="day-sep">${escapeHtml(day)}</div>`));
-      lastDay = day; lastSenderKey = null;
-    }
-
-    let bubbleCls = 'msg';
-    if(fullView){ bubbleCls += m.visibility === 'internal' ? ' internal' : ' client-reply'; }
-    else { bubbleCls += mine ? ' from-client' : ' client-reply'; }
-
-    let rawName;
-    if(fullView){ rawName = m.sender_username; }
-    else { rawName = mine ? t('you') : t('staff'); }
-    const displayName = fullView ? prettyName(rawName) : rawName;
-    const badge = fullView ? (m.visibility==='internal' ? ' ' + t('internalNote') : ' ' + t('sentToClient')) : '';
-
-    const senderKey = (fullView ? m.sender_id : (mine ? 'me' : 'other')) + '|' + m.visibility;
-    const grouped = (senderKey === lastSenderKey) && (new Date(m.created_at).getTime() - lastTs < 3*60*1000);
-    lastSenderKey = senderKey; lastTs = new Date(m.created_at).getTime();
-
-    const { color, letter } = avatarForMessage(m, threadId, fullView);
-    const rowCls = 'msg-row ' + (mine ? 'own' : 'other') + (grouped ? ' grouped' : '');
-
-    const row = el(`<div class="${rowCls}">
-      <div class="avatar ${grouped?'spacer':''}" style="${avatarStyle(color)}">${escapeHtml(letter)}</div>
-      <div class="msg-col">
-        <div class="${bubbleCls}">
-          <div class="meta"><b style="color:${color}">${escapeHtml(displayName)}</b>${escapeHtml(badge)} <span class="time">· ${fmtTime(m.created_at)}</span></div>
-          <div class="body"></div>
-          ${fullView ? '<span class="del">✕</span>' : ''}
-        </div>
-      </div>
-    </div>`);
-    row.querySelector('.body').textContent = m.content;
-    if(m.image_url){
-      const img = el(`<img class="attach" src="${escapeHtml(m.image_url)}" />`);
-      img.onclick = ()=> window.open(m.image_url, '_blank');
-      row.querySelector('.msg').appendChild(img);
-    }
-    if(fullView){
-      const delSpan = row.querySelector('.del');
-      if(myPerm('can_delete')){
-        delSpan.onclick = async ()=>{ const { error } = await sb.from('messages').delete().eq('id', m.id); if(error){ alert('ERROR: '+error.message); } };
-      } else { delSpan.style.display = 'none'; }
-    }
-    container.appendChild(row);
-  });
-  container.scrollTop = container.scrollHeight;
-}
-
-function subscribeToThread(threadId){
-  if(state.msgChannel){ sb.removeChannel(state.msgChannel); state.msgChannel = null; }
-  state.msgChannel = sb.channel('messages-'+threadId)
-    .on('postgres_changes', { event:'*', schema:'public', table:'messages', filter:'thread_id=eq.'+threadId }, ()=>{ loadMessagesForThread(threadId); })
-    .subscribe();
-}
-
-function resolveVisibility(threadId, text){
-  const own = isOwnThread(threadId);
-  let visibility = 'client';
-  let cleanText = text;
-  if(!own){
-    const toggle = document.getElementById('reply-toggle').checked;
-    visibility = 'internal';
-    if(toggle && !/^!r\s/i.test(cleanText)){ cleanText = '!r ' + cleanText; }
-    if(/^!r\s+/i.test(cleanText)){ visibility = 'client'; cleanText = cleanText.replace(/^!r\s+/i, ''); }
-  }
-  return { visibility, cleanText };
-}
-
-async function notifyDiscord(threadId, content, imageUrl, visibility){
-  try{
-    await fetch('/api/discord-notify', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+state.session.access_token },
-      body: JSON.stringify({ threadId, content, imageUrl, visibility })
-    });
-  } catch(e){ console.warn('discord-notify failed', e); }
-}
-
-async function sendMessage(){
-  const threadId = state.activeThreadId;
-  if(!threadId) return;
-  const input = document.getElementById('chat-input');
-  let text = input.value;
-  if(!text.trim()) return;
-
-  const { visibility, cleanText } = resolveVisibility(threadId, text);
-  if(!cleanText.trim()) return;
-
-  const { error } = await sb.from('messages').insert({
-    thread_id: threadId, sender_id: state.profile.id, sender_username: state.profile.username,
-    content: cleanText.trim(), visibility
-  });
-  if(error){ alert('ERROR: ' + error.message); return; }
-  input.value = '';
-  await loadMessagesForThread(threadId);
-  notifyDiscord(threadId, cleanText.trim(), null, visibility);
-}
-
-async function sendImage(file){
-  const threadId = state.activeThreadId;
-  if(!threadId || !file) return;
-  if(file.type !== 'image/png'){ alert(t('imageOnlyPng')); return; }
-  if(file.size > 5*1024*1024){ alert(t('imageTooBig')); return; }
-
-  const imageBtn = document.getElementById('chat-image-btn');
-  const prevLabel = imageBtn.textContent;
-  imageBtn.textContent = '...'; imageBtn.disabled = true;
-
-  try{
-    const path = `${threadId}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.png`;
-    const { error: upErr } = await sb.storage.from('chat-images').upload(path, file, { contentType:'image/png', upsert:false });
-    if(upErr){ alert('ERROR: ' + upErr.message); return; }
-    const { data: pub } = sb.storage.from('chat-images').getPublicUrl(path);
-    const imageUrl = pub.publicUrl;
-
-    const { visibility, cleanText } = resolveVisibility(threadId, document.getElementById('chat-input').value || '');
-
-    const { error } = await sb.from('messages').insert({
-      thread_id: threadId, sender_id: state.profile.id, sender_username: state.profile.username,
-      content: cleanText.trim(), image_url: imageUrl, visibility
-    });
-    if(error){ alert('ERROR: ' + error.message); return; }
-    document.getElementById('chat-input').value = '';
-    await loadMessagesForThread(threadId);
-    notifyDiscord(threadId, cleanText.trim(), imageUrl, visibility);
-  } finally {
-    imageBtn.textContent = prevLabel; imageBtn.disabled = false;
-    document.getElementById('chat-image-input').value = '';
-  }
-}
-
-document.getElementById('chat-send-btn').addEventListener('click', sendMessage);
-document.getElementById('chat-input').addEventListener('keydown', (e)=>{ if(e.key==='Enter') sendMessage(); });
-document.getElementById('reply-toggle').addEventListener('change', (e)=>{ document.getElementById('reply-toggle-wrap').classList.toggle('on', e.target.checked); });
-document.getElementById('chat-image-btn').addEventListener('click', ()=> document.getElementById('chat-image-input').click());
-document.getElementById('chat-image-input').addEventListener('change', (e)=>{ const file = e.target.files && e.target.files[0]; if(file) sendImage(file); });
-document.getElementById('logout-btn').addEventListener('click', logout);
 
 /* ============================================================================
    BOOTSTRAP
    ========================================================================== */
-document.getElementById('login-btn').addEventListener('click', attemptLogin);
-document.getElementById('login-password').addEventListener('keydown', (e)=>{ if(e.key==='Enter') attemptLogin(); });
+async function boot(){
+  await loadSettings();
+  const { data } = await sb.auth.getSession();
+  state.session = data.session;
+  state.isAdmin = !!data.session;
 
-window.addEventListener('load', async ()=>{
-  applyTranslations();
-  runBootSequence(async ()=>{
-    const { data } = await sb.auth.getSession();
-    if(data && data.session){ await onAuthed(data.session); }
-    else { document.getElementById('login-screen').classList.add('visible'); }
+  subscribeSettingsRealtime();
+
+  if(state.settings.self_destruct && !state.isAdmin){
+    showLockout();
+    return;
+  }
+  if(state.isAdmin){
+    await enterTablet();
+  }
+  // else: splash screen (already visible by default) waits for Connect click
+}
+
+document.getElementById('connect-btn').addEventListener('click', ()=>{
+  runHackSequence(()=> enterTablet());
+});
+
+async function enterTablet(){
+  hideLockout();
+  document.getElementById('splash-screen').classList.add('hidden-el');
+  document.getElementById('tablet-app').classList.add('visible');
+  await loadSettings();
+  applyMapImage();
+  await loadMissions();
+  subscribeMissionsRealtime();
+  document.getElementById('hidden-admin-btn').classList.remove('hidden-el');
+  updateAdminBadge();
+}
+
+function applyMapImage(){
+  const img = document.getElementById('map-image');
+  const placeholder = document.getElementById('map-placeholder');
+  if(state.settings.map_image_url){
+    img.src = state.settings.map_image_url;
+    img.classList.remove('hidden-el');
+    placeholder.classList.add('hidden-el');
+    img.onload = ()=>{ renderPins(); };
+  } else {
+    img.classList.add('hidden-el');
+    placeholder.classList.remove('hidden-el');
+    renderPins();
+  }
+}
+
+/* ============================================================================
+   REALTIME
+   ========================================================================== */
+function subscribeSettingsRealtime(){
+  if(state.settingsChannel) sb.removeChannel(state.settingsChannel);
+  state.settingsChannel = sb.channel('app-settings-watch')
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'app_settings' }, (payload)=>{
+      state.settings = payload.new;
+      if(state.settings.self_destruct && !state.isAdmin){
+        showLockout();
+      } else if(!state.settings.self_destruct){
+        hideLockout();
+        if(document.getElementById('tablet-app').classList.contains('visible')) applyMapImage();
+      }
+      if(document.getElementById('admin-panel-modal').classList.contains('visible')) renderKillswitchTab();
+    })
+    .subscribe();
+}
+function subscribeMissionsRealtime(){
+  if(state.missionsChannel) sb.removeChannel(state.missionsChannel);
+  state.missionsChannel = sb.channel('missions-watch')
+    .on('postgres_changes', { event:'*', schema:'public', table:'missions' }, ()=>{
+      loadMissions().then(()=>{
+        if(document.getElementById('admin-panel-modal').classList.contains('visible')) renderAdminMissionList();
+      });
+    })
+    .subscribe();
+}
+
+/* ============================================================================
+   MISSIONS — load / render / pins / detail panel
+   ========================================================================== */
+async function loadMissions(){
+  const { data, error } = await sb.from('missions').select('*').order('created_at', { ascending:true });
+  if(!error) state.missions = data || [];
+  renderPins();
+}
+
+function renderPins(){
+  const layer = document.getElementById('pins-layer');
+  layer.innerHTML = '';
+  state.missions.forEach(m=>{
+    const pin = el(`<div class="mission-pin status-${m.status} ${m.id===state.selectedMissionId?'selected':''}" style="left:${m.x}%; top:${m.y}%;" title="${escapeHtml(m.title)}">${m.icon || '🎯'}</div>`);
+    pin.onclick = (e)=>{ e.stopPropagation(); selectMission(m.id); };
+    layer.appendChild(pin);
+  });
+}
+
+function selectMission(id){
+  state.selectedMissionId = id;
+  renderPins();
+  renderDetailPanel();
+}
+
+function closeDetailPanel(){
+  state.selectedMissionId = null;
+  renderPins();
+  document.getElementById('detail-panel').classList.add('hidden-el');
+}
+
+function renderDetailPanel(){
+  const m = state.missions.find(x=>x.id === state.selectedMissionId);
+  const panel = document.getElementById('detail-panel');
+  if(!m){ panel.classList.add('hidden-el'); return; }
+  panel.classList.remove('hidden-el');
+  panel.innerHTML = `
+    <button class="close-btn" id="detail-close-btn">✕</button>
+    <h2>${m.icon || '🎯'} ${escapeHtml(m.title)}</h2>
+    <div class="giver">Issued by <b>${escapeHtml(m.giver || 'Sovereign')}</b></div>
+    <div>
+      <span class="badge risk-${m.risk}">${riskLabel(m.risk)} risk</span>
+      <span class="badge status-${m.status}">${statusLabel(m.status)}</span>
+    </div>
+    <div class="desc-label">Briefing</div>
+    <div class="desc">${escapeHtml(m.description) || '—'}</div>
+    ${m.reward ? `<div class="reward"><b>Reward:</b> ${escapeHtml(m.reward)}</div>` : ''}
+    <div class="admin-row" id="detail-admin-row"></div>
+  `;
+  document.getElementById('detail-close-btn').onclick = closeDetailPanel;
+  const adminRow = document.getElementById('detail-admin-row');
+  if(state.isAdmin){
+    const editBtn = el(`<button class="btn secondary small">Edit</button>`);
+    editBtn.onclick = ()=> openMissionForm(m);
+    const delBtn = el(`<button class="btn danger small">Delete</button>`);
+    delBtn.onclick = ()=> deleteMission(m);
+    adminRow.appendChild(editBtn);
+    adminRow.appendChild(delBtn);
+  }
+}
+
+/* map click → placement mode */
+document.getElementById('pins-layer').addEventListener('click', (e)=>{
+  if(!state.placeMode) return;
+  const container = document.getElementById('map-container');
+  const rect = container.getBoundingClientRect();
+  const xPct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+  const yPct = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+  setPlaceMode(false);
+  openMissionForm(null, xPct, yPct);
+});
+function setPlaceMode(on){
+  state.placeMode = on;
+  document.getElementById('pins-layer').classList.toggle('place-mode', on);
+  document.getElementById('place-hint').classList.toggle('hidden-el', !on);
+}
+
+/* ============================================================================
+   MISSION FORM (create/edit)
+   ========================================================================== */
+function renderIconPicker(){
+  const wrap = document.getElementById('mf-icon-pick');
+  wrap.innerHTML = '';
+  ICONS.forEach(ic=>{
+    const b = el(`<button type="button" class="${ic===state.selectedIcon?'active':''}">${ic}</button>`);
+    b.onclick = ()=>{ state.selectedIcon = ic; renderIconPicker(); };
+    wrap.appendChild(b);
+  });
+}
+
+function openMissionForm(mission, x, y){
+  state.editingMissionId = mission ? mission.id : null;
+  state.pendingCoords = mission ? { x: mission.x, y: mission.y } : { x, y };
+  state.selectedIcon = mission ? (mission.icon || ICONS[0]) : ICONS[0];
+
+  document.getElementById('mission-form-title').textContent = mission ? 'Edit Mission' : 'New Mission';
+  document.getElementById('mf-title').value = mission ? mission.title : '';
+  document.getElementById('mf-giver').value = mission ? mission.giver : 'Sovereign';
+  document.getElementById('mf-description').value = mission ? mission.description : '';
+  document.getElementById('mf-reward').value = mission ? mission.reward : '';
+  document.getElementById('mf-risk').value = mission ? mission.risk : 'medium';
+  document.getElementById('mf-status').value = mission ? mission.status : 'open';
+  document.getElementById('mf-error').textContent = '';
+  document.getElementById('mf-delete-btn').classList.toggle('hidden-el', !mission);
+  renderIconPicker();
+  document.getElementById('mission-form-modal').classList.add('visible');
+}
+function closeMissionForm(){
+  document.getElementById('mission-form-modal').classList.remove('visible');
+  state.editingMissionId = null;
+  state.pendingCoords = null;
+}
+document.getElementById('mf-cancel-btn').addEventListener('click', closeMissionForm);
+
+document.getElementById('mf-save-btn').addEventListener('click', async ()=>{
+  const errEl = document.getElementById('mf-error');
+  errEl.textContent = '';
+  const title = document.getElementById('mf-title').value.trim();
+  if(!title){ errEl.textContent = 'Title is required.'; return; }
+  if(!state.pendingCoords){ errEl.textContent = 'Missing map coordinates.'; return; }
+
+  const payload = {
+    title,
+    giver: document.getElementById('mf-giver').value.trim() || 'Sovereign',
+    description: document.getElementById('mf-description').value.trim(),
+    reward: document.getElementById('mf-reward').value.trim(),
+    risk: document.getElementById('mf-risk').value,
+    status: document.getElementById('mf-status').value,
+    icon: state.selectedIcon,
+    x: state.pendingCoords.x,
+    y: state.pendingCoords.y,
+    updated_at: new Date().toISOString(),
+  };
+
+  let error;
+  if(state.editingMissionId){
+    ({ error } = await sb.from('missions').update(payload).eq('id', state.editingMissionId));
+  } else {
+    ({ error } = await sb.from('missions').insert(payload));
+  }
+  if(error){ errEl.textContent = 'ERROR: ' + error.message; return; }
+
+  closeMissionForm();
+  await loadMissions();
+  renderAdminMissionList();
+});
+
+document.getElementById('mf-delete-btn').addEventListener('click', ()=>{
+  const mission = state.missions.find(m=>m.id === state.editingMissionId);
+  if(!mission) return;
+  closeMissionForm();
+  deleteMission(mission);
+});
+
+function deleteMission(mission){
+  showConfirm(`Delete mission "${mission.title}"? This cannot be undone.`, async ()=>{
+    const { error } = await sb.from('missions').delete().eq('id', mission.id);
+    if(error){ showAlert('ERROR: ' + error.message, true); return; }
+    if(state.selectedMissionId === mission.id) closeDetailPanel();
+    await loadMissions();
+    renderAdminMissionList();
+  }, { title: 'Delete Mission' });
+}
+
+/* ============================================================================
+   ADMIN LOGIN
+   ========================================================================== */
+document.getElementById('hidden-admin-btn').addEventListener('click', ()=>{
+  document.getElementById('admin-login-password').value = '';
+  document.getElementById('admin-login-error').textContent = '';
+  document.getElementById('admin-login-modal').classList.add('visible');
+});
+document.getElementById('admin-login-cancel').addEventListener('click', ()=>{
+  document.getElementById('admin-login-modal').classList.remove('visible');
+});
+document.getElementById('admin-login-password').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') document.getElementById('admin-login-submit').click();
+});
+document.getElementById('admin-login-submit').addEventListener('click', async ()=>{
+  const pw = document.getElementById('admin-login-password').value;
+  const errEl = document.getElementById('admin-login-error');
+  if(!pw){ errEl.textContent = 'Enter the cipher.'; return; }
+  const { data, error } = await sb.auth.signInWithPassword({ email: ADMIN_EMAIL, password: pw });
+  if(error){ errEl.textContent = 'ACCESS DENIED'; return; }
+  state.session = data.session;
+  state.isAdmin = true;
+  document.getElementById('admin-login-modal').classList.remove('visible');
+  updateAdminBadge();
+  if(state.selectedMissionId) renderDetailPanel();
+  hideLockout();
+  if(!document.getElementById('tablet-app').classList.contains('visible')){
+    await enterTablet();
+  }
+});
+
+function updateAdminBadge(){
+  document.getElementById('admin-badge').classList.toggle('hidden-el', !state.isAdmin);
+}
+
+document.getElementById('admin-logout-btn').addEventListener('click', async ()=>{
+  await sb.auth.signOut();
+  state.session = null;
+  state.isAdmin = false;
+  updateAdminBadge();
+  document.getElementById('admin-panel-modal').classList.remove('visible');
+  if(state.selectedMissionId) renderDetailPanel();
+});
+
+/* ============================================================================
+   ADMIN PANEL
+   ========================================================================== */
+document.getElementById('open-admin-panel-btn').addEventListener('click', ()=>{
+  document.getElementById('admin-panel-modal').classList.add('visible');
+  renderAdminMissionList();
+  renderKillswitchTab();
+  document.getElementById('map-upload-error').textContent = '';
+});
+document.getElementById('admin-panel-close-btn').addEventListener('click', ()=>{
+  document.getElementById('admin-panel-modal').classList.remove('visible');
+  setPlaceMode(false);
+});
+
+document.querySelectorAll('.admin-tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.admin-tab-panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('admin-tab-'+tab.dataset.tab).classList.add('active');
   });
 });
+
+document.getElementById('admin-place-mission-btn').addEventListener('click', ()=>{
+  document.getElementById('admin-panel-modal').classList.remove('visible');
+  setPlaceMode(true);
+});
+
+function renderAdminMissionList(){
+  const wrap = document.getElementById('admin-mission-list');
+  wrap.innerHTML = '';
+  if(state.missions.length === 0){
+    wrap.appendChild(el(`<div style="color:var(--dim); font-size:12px;">No missions placed yet.</div>`));
+    return;
+  }
+  state.missions.slice().reverse().forEach(m=>{
+    const item = el(`<div class="mission-list-item">
+      <div class="ic">${m.icon || '🎯'}</div>
+      <div class="info">
+        <div class="t">${escapeHtml(m.title)}</div>
+        <div class="m">${escapeHtml(m.giver || 'Sovereign')} · ${riskLabel(m.risk)} · ${statusLabel(m.status)}</div>
+      </div>
+      <div class="acts"></div>
+    </div>`);
+    const acts = item.querySelector('.acts');
+    const editBtn = el(`<button class="btn secondary small">Edit</button>`);
+    editBtn.onclick = ()=> openMissionForm(m);
+    const delBtn = el(`<button class="btn danger small">Del</button>`);
+    delBtn.onclick = ()=> deleteMission(m);
+    acts.appendChild(editBtn); acts.appendChild(delBtn);
+    wrap.appendChild(item);
+  });
+}
+
+/* ---- map upload ---- */
+document.getElementById('map-upload-input').addEventListener('change', async (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const errEl = document.getElementById('map-upload-error');
+  errEl.textContent = '';
+  if(file.size > 12*1024*1024){ errEl.textContent = 'Image too large (max 12MB).'; return; }
+
+  const preview = document.getElementById('map-upload-preview');
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+
+  const path = `map-${Date.now()}.${(file.name.split('.').pop()||'png')}`;
+  const { error: upErr } = await sb.storage.from('mission-map').upload(path, file, { upsert:false });
+  if(upErr){ errEl.textContent = 'ERROR: ' + upErr.message; return; }
+  const { data: pub } = sb.storage.from('mission-map').getPublicUrl(path);
+
+  const { error: updErr } = await sb.from('app_settings').update({ map_image_url: pub.publicUrl, updated_at: new Date().toISOString() }).eq('id', 1);
+  if(updErr){ errEl.textContent = 'ERROR: ' + updErr.message; return; }
+
+  state.settings.map_image_url = pub.publicUrl;
+  applyMapImage();
+});
+
+/* ---- self-destruct ---- */
+function renderKillswitchTab(){
+  const label = document.getElementById('sd-status-label');
+  const btn = document.getElementById('self-destruct-btn');
+  if(state.settings.self_destruct){
+    label.textContent = '● NETWORK SEVERED';
+    label.className = 'sd-status on';
+    btn.textContent = 'Re-Enable Network';
+  } else {
+    label.textContent = '● NETWORK OPERATIONAL';
+    label.className = 'sd-status off';
+    btn.textContent = 'Self-Destruct — Sever Network';
+  }
+}
+document.getElementById('self-destruct-btn').addEventListener('click', ()=>{
+  const turningOn = !state.settings.self_destruct;
+  const msg = turningOn
+    ? 'This will immediately lock every non-admin operative out of the tablet. Only admins will be able to reconnect and undo this. Proceed?'
+    : 'Re-open the network to all operatives?';
+  showConfirm(msg, async ()=>{
+    const { error } = await sb.from('app_settings').update({ self_destruct: turningOn, updated_at: new Date().toISOString() }).eq('id', 1);
+    if(error){ showAlert('ERROR: ' + error.message, true); return; }
+    state.settings.self_destruct = turningOn;
+    renderKillswitchTab();
+  }, { title: turningOn ? 'Confirm Self-Destruct' : 'Confirm Re-Enable' });
+});
+
+/* ============================================================================
+   BOOTSTRAP
+   ========================================================================== */
+window.addEventListener('load', boot);
 </script>
 </body>
 </html>

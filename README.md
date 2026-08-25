@@ -1,71 +1,80 @@
-# Update notes — Edit modal, quieter Discord, nicer chat, image cleanup
+# Sovereign — Mission Uplink Tablet
 
-No new SQL this round — your database is already up to date (schema.sql +
-migration_v2/v3/v4). Just redeploy these files to Vercel:
+Complete rebuild. This is a two-file app now: `index.html` (everything —
+splash, hack-in sequence, map, admin panel) and `schema.sql` (the database).
+No serverless functions, no `package.json`, no `vercel.json` — it's a static
+site talking directly to Supabase.
 
-- `index.html` (updated)
-- `api/create-account.js`, `api/delete-account.js`, `api/discord-notify.js` (updated)
-- `api/update-account.js`, `api/cleanup-images.js` (new)
-- `vercel.json` (new — enables the daily image cleanup cron)
-- `package.json` (unchanged)
+## 1. Run the schema
 
-## New env var? No
+Open your existing Supabase project → SQL Editor → paste the whole contents
+of `schema.sql` → Run.
 
-Everything below reuses the env vars you already have (`SUPABASE_URL`,
-`SUPABASE_SERVICE_ROLE_KEY`, `DISCORD_WEBHOOK_URL`, `DISCORD_PING_ROLE_ID`).
-Nothing new to add — just deploy and redeploy.
+This **drops the entire old chat-app schema** (roles, threads, messages,
+categories, the `chat-images` bucket, etc. — everything) and replaces it
+with:
+- `missions` — one row per mission pin (title, giver, description, reward,
+  risk, status, x/y position as a percentage of the map image, icon)
+- `app_settings` — a single row holding the current map image URL and the
+  self-destruct flag
+- a `mission-map` storage bucket (public read) for the map image
+- one seeded admin login: `sovereign-admin@tablet.local` /
+  **`ChangeMe123!`** — change this password immediately after your first
+  login (Supabase Dashboard → Authentication → Users → that email → Reset
+  password). It's never shown in the UI; the admin login only asks for a
+  password.
 
-## 1. Edit Account — now a proper modal
+Your old `admin` / `ramsey` accounts are left alone in `auth.users` (not
+deleted) but have no special power anymore. Note: in this new schema *any*
+authenticated user counts as an admin, so if you keep those two accounts
+around, their old passwords would also open the admin panel here — delete
+them from Authentication → Users if you don't want that.
 
-Settings → Accounts → "Edit" on any row opens a modal where you can change:
-username, password (leave blank to keep the current one), role, avatar
-color, category/sub-category (moves their chat), and business — all in one
-place, one Save button. Runs through the new `api/update-account.js`
-(level 9/10 only), which handles the tricky parts (changing the login
-email when username changes, resetting the password via Supabase admin)
-server-side.
+## 2. Deploy
 
-## 2. Discord only pings for real user messages
+Push `index.html` (and `schema.sql`, just for reference) to your repo and
+redeploy on Vercel as a static site. You can remove the old `api/` folder,
+`package.json`, and `vercel.json` from your repo — they're gone from this
+delivery since nothing server-side is needed anymore.
 
-Previously every message pinged Discord (with an option to mute internal
-notes). Now: **only the chat owner writing in their own chat triggers a
-Discord ping.** Staff replies — whether internal notes or `!r` replies —
-never hit Discord anymore, since staff already see those live in the app.
-This is enforced in `api/discord-notify.js` by checking that the sender is
-actually the thread's owner, not just trusting the client.
+## How it works
 
-## 3. Nicer chat: names and avatars
+- **Everyone** who opens the site sees a splash screen with a **Connect**
+  button. Pressing it plays the hacking-in sequence (blocking Atelis,
+  blocking Cerberus, rerouting through secure channels) and then reveals the
+  map. No login needed for this — it's flavor, not a gate.
+- The map shows glowing mission pins. Click one to open mission details on
+  the right (giver, risk, status, briefing, reward).
+- **Admin access** is a small, barely-visible dot in the bottom-right corner
+  of the screen. Click it, enter the admin password, and an "ADMIN" badge
+  appears with **Panel** and **Exit** buttons.
+- The **admin panel** has three tabs:
+  - **Missions** — "Place New Mission" lets you click anywhere on the map to
+    drop a pin, then fill in the details. Existing missions can be edited or
+    deleted from the same list.
+  - **Map** — upload/replace the map image. It goes straight to Supabase
+    Storage and updates instantly for everyone connected. Mission pins are
+    stored as percentages, so they stay correctly placed as long as the new
+    map covers the same area as the old one.
+  - **Kill Switch** — the self-destruct button. Pressing it immediately locks
+    out every non-admin viewer (they see a full "NETWORK COMPROMISED"
+    screen) until an admin comes back to this same tab and re-enables it.
+    Admins can always still log in during a lockout.
+- All of it updates live across open tablets via Supabase Realtime — if one
+  admin adds a mission or flips the kill switch, everyone else's screen
+  updates without a refresh.
 
-- Sender names are now prettified everywhere in the chat: `undead_vikings`
-  → `Undead Vikings`, `MC - Undead Vikings` → styled cleanly with the dash
-  gone and each word capitalized.
-- Avatars got a gradient + glow matching their color instead of a flat
-  circle, and scale up slightly on hover.
-- The sender's name in each message is now bold and colored to match their
-  avatar, so it reads faster at a glance.
+## No map yet?
 
-## 4. Image cleanup
+That's fine — the map area shows a placeholder grid until you upload one via
+the admin panel's Map tab. You can even place test missions against the
+placeholder; they'll be correctly positioned once you upload the real map
+(as long as it has a similar aspect ratio).
 
-PNG attachments older than 5 days are removed automatically — the file is
-deleted from storage and the image is cleared from the message (the text,
-if any, stays). Two ways this runs:
+## Note on the access model
 
-- **Automatically**: `vercel.json` now defines a daily cron job (4am UTC)
-  hitting `/api/cleanup-images`. Vercel picks this up on deploy — nothing
-  to configure.
-- **Manually**: Settings → Accounts → "Maintenance" → "Clear images older
-  than 5 days" button (level 9/10 only) runs the same cleanup immediately.
-
-Note: Vercel's free (Hobby) plan supports daily cron jobs; if you're on
-Hobby and it doesn't fire, check Vercel's dashboard → your project →
-Settings → Cron Jobs to confirm it's registered after deploying
-`vercel.json`.
-
-## Reminder — the rest of the app is unchanged
-
-Permission model (levels, category grants, `!r`), PNG upload, business
-field, category creation with per-category webhook, EN/FR toggle — all
-still work exactly as before. If you ever need the SQL files again
-(`schema.sql`, `migration_v2/v3/v4.sql`, `seed_groups.sql`), just ask and
-I'll regenerate them — nothing in your database needs to change for this
-update.
+You asked for the admin entry to just be "a little button somewhere... not
+very visible" — that's what the bottom-right dot is. There's no separate
+login for regular viewers; the map itself is open to anyone who presses
+Connect. If that's not what you meant, tell me and I'll adjust (e.g. requiring
+a shared passcode before the map is visible at all).
