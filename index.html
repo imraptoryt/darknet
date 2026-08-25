@@ -833,7 +833,7 @@ document.getElementById('admin-login-submit').addEventListener('click', async ()
   const errEl = document.getElementById('admin-login-error');
   if(!pw){ errEl.textContent = 'Enter the cipher.'; return; }
   const { data, error } = await sb.auth.signInWithPassword({ email: ADMIN_EMAIL, password: pw });
-  if(error){ errEl.textContent = 'ACCESS DENIED'; return; }
+  if(error){ errEl.textContent = 'ACCESS DENIED — ' + error.message + (error.status ? ' (status ' + error.status + ')' : ''); return; }
   state.session = data.session;
   state.isAdmin = true;
   document.getElementById('admin-login-modal').classList.remove('visible');
