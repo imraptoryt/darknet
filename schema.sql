@@ -131,34 +131,48 @@ create policy "mission-map admin delete" on storage.objects
   for delete using (bucket_id = 'mission-map' and auth.role() = 'authenticated');
 
 -- ---------------------------------------------------------------------------
--- 3. Seed the single admin account
+-- 3. Seed / force-reset the single admin account
 --
 -- Email is fixed/synthetic (never shown in the UI — the admin login only
 -- asks for a password).
 --
 -- Password: raptor
+--
+-- This block is UNCONDITIONAL about the password: whether the account
+-- already exists (from an earlier run) or not, running this script always
+-- leaves the password set to "raptor". No more "only sets it on first
+-- creation" gotcha.
 -- ---------------------------------------------------------------------------
 do $$
 declare
-  new_user_id uuid := gen_random_uuid();
+  admin_id uuid;
 begin
-  if not exists (select 1 from auth.users where email = 'sovereign-admin@tablet.local') then
+  select id into admin_id from auth.users where email = 'sovereign-admin@tablet.local';
+
+  if admin_id is null then
+    admin_id := gen_random_uuid();
     insert into auth.users (
       id, instance_id, aud, role, email, encrypted_password,
       email_confirmed_at, created_at, updated_at,
       raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token
     ) values (
-      new_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+      admin_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
       'sovereign-admin@tablet.local', crypt('raptor', gen_salt('bf')),
       now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}', '', ''
     );
     insert into auth.identities (
       id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
     ) values (
-      gen_random_uuid(), new_user_id, new_user_id::text,
-      jsonb_build_object('sub', new_user_id::text, 'email', 'sovereign-admin@tablet.local'),
+      gen_random_uuid(), admin_id, admin_id::text,
+      jsonb_build_object('sub', admin_id::text, 'email', 'sovereign-admin@tablet.local'),
       'email', now(), now(), now()
     );
+  else
+    update auth.users
+    set encrypted_password = crypt('raptor', gen_salt('bf')),
+        email_confirmed_at = coalesce(email_confirmed_at, now()),
+        updated_at = now()
+    where id = admin_id;
   end if;
 end $$;
 
@@ -166,10 +180,8 @@ end $$;
 -- Done. Sanity check:
 --   select * from public.app_settings;
 --   select * from public.missions;
---   select email from auth.users where email = 'sovereign-admin@tablet.local';
+--   select email, updated_at from auth.users where email = 'sovereign-admin@tablet.local';
 --
--- If sovereign-admin@tablet.local already existed from a previous run and
--- you want to (re)set its password to "raptor", do it in Supabase Dashboard
--- > Authentication > Users > sovereign-admin@tablet.local > Reset password
--- (this script only sets the password on first creation).
+-- Password is guaranteed to be "raptor" after this script runs, every time,
+-- whether the account is new or already existed.
 -- ============================================================================
