@@ -138,9 +138,13 @@
   .mission-pin.status-in_progress{ border-color:var(--warn); box-shadow:0 0 10px rgba(255,210,59,0.6); animation:pulse 1.6s infinite; }
   .mission-pin.status-completed{ border-color:var(--ok); box-shadow:0 0 8px rgba(76,175,122,0.5); opacity:0.75; }
   .mission-pin.status-failed{ border-color:var(--danger); box-shadow:0 0 8px rgba(255,59,59,0.5); opacity:0.6; }
+  .mission-pin.locked{ border-color:#8a8a8a; filter:grayscale(0.55); }
+  .mission-pin.pin-hidden-admin{ opacity:0.4; border-style:dashed; }
   @keyframes pulse{ 0%,100%{ box-shadow:0 0 8px rgba(255,210,59,0.5);} 50%{ box-shadow:0 0 16px rgba(255,210,59,0.9);} }
 
   #place-hint{ position:absolute; top:14px; left:50%; transform:translateX(-50%); background:var(--panel2); border:1px solid var(--accent); color:var(--accent2); font-size:11.5px; letter-spacing:1px; padding:9px 18px; text-transform:uppercase; z-index:15; }
+  #zoom-indicator{ position:absolute; bottom:16px; left:16px; z-index:14; background:var(--panel2); border:1px solid var(--border); color:var(--dim); font-size:11px; letter-spacing:1px; padding:7px 12px; cursor:pointer; user-select:none; }
+  #zoom-indicator:hover{ color:var(--accent2); border-color:var(--accent-dim); }
 
   #detail-panel{ position:absolute; top:0; right:0; bottom:0; width:340px; max-width:88vw; z-index:12;
     border-left:1px solid var(--border); background:linear-gradient(180deg,var(--panel),var(--panel2));
@@ -263,9 +267,10 @@
         <img id="map-image" class="hidden-el" />
         <div id="map-placeholder"><span>NO MAP LOADED — UPLOAD VIA ADMIN PANEL</span></div>
         <div id="pins-layer"></div>
-        <div id="place-hint" class="hidden-el">CLICK THE MAP TO PLACE THE MISSION</div>
       </div>
     </div>
+    <div id="place-hint" class="hidden-el">CLICK THE MAP TO PLACE THE MISSION</div>
+    <div id="zoom-indicator" title="Click to reset view">🔍 100%</div>
     <div id="detail-panel"></div>
   </div>
 </div>
@@ -335,6 +340,14 @@
     </div>
     <label>Icon</label>
     <div class="icon-pick" id="mf-icon-pick"></div>
+    <div class="field">
+      <label>Lock Code (optional)</label>
+      <input type="text" id="mf-lock-code" placeholder="e.g. 7734 — blip stays locked on the map until this is entered" />
+    </div>
+    <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text); margin-bottom:16px;">
+      <input type="checkbox" id="mf-hidden" style="width:auto;" />
+      <label for="mf-hidden" style="margin:0; text-transform:none; letter-spacing:0; color:var(--text); font-size:12px;">Hide this blip from the map entirely (admin-only — no one else ever sees it)</label>
+    </div>
     <div class="modal-actions">
       <button class="btn" id="mf-save-btn">Save Mission</button>
       <button class="btn secondary" id="mf-cancel-btn">Cancel</button>
@@ -390,6 +403,22 @@
   </div>
 </div>
 
+<!-- ============ UNLOCK MODAL ============ -->
+<div class="modal-overlay" id="unlock-modal">
+  <div class="modal-card" style="width:min(360px,90vw);">
+    <h3>🔒 LOCKED TRANSMISSION</h3>
+    <div class="field">
+      <label>Enter Access Code</label>
+      <input type="text" id="unlock-code-input" autocomplete="off" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="unlock-submit-btn">Unlock</button>
+      <button class="btn secondary" id="unlock-cancel-btn">Cancel</button>
+    </div>
+    <div class="form-error" id="unlock-error"></div>
+  </div>
+</div>
+
 <!-- ============ CONFIRM / ALERT MODALS ============ -->
 <div class="modal-overlay" id="confirm-modal">
   <div class="modal-card" style="width:min(380px,90vw);">
@@ -432,6 +461,8 @@ const state = {
   settings: { map_image_url: null, self_destruct: false, self_destruct_message: '' },
   selectedMissionId: null,
   mapDragMoved: false,
+  mapZoom: 1,
+  unlockedMissionIds: loadUnlockedIds(),
   placeMode: false,
   editingMissionId: null,
   pendingCoords: null,
@@ -457,6 +488,14 @@ function riskLabel(r){ return { low:'Low', medium:'Medium', high:'High', extreme
 function statusLabel(s){ return { open:'Open', in_progress:'In Progress', completed:'Completed', failed:'Failed' }[s] || s; }
 function riskIcon(r){ return { low:'●', medium:'▲', high:'⚡', extreme:'☠' }[r] || '●'; }
 function statusIcon(s){ return { open:'◇', in_progress:'◐', completed:'✔', failed:'✕' }[s] || '◇'; }
+function loadUnlockedIds(){
+  try{ return new Set(JSON.parse(localStorage.getItem('sovereign_unlocked') || '[]')); }
+  catch(e){ return new Set(); }
+}
+function saveUnlockedIds(set){
+  try{ localStorage.setItem('sovereign_unlocked', JSON.stringify(Array.from(set))); }
+  catch(e){ /* ignore */ }
+}
 
 /* ---- Custom modal dialogs (no native confirm()/alert()) ---- */
 let _confirmCallback = null;
@@ -635,6 +674,7 @@ async function enterTablet(){
 }
 
 function applyMapImage(){
+  resetZoom();
   const img = document.getElementById('map-image');
   const placeholder = document.getElementById('map-placeholder');
   const url = state.settings.map_image_url || DEFAULT_MAP_URL;
@@ -697,8 +737,23 @@ function renderPins(){
   const layer = document.getElementById('pins-layer');
   layer.innerHTML = '';
   state.missions.forEach(m=>{
-    const pin = el(`<div class="mission-pin status-${m.status} ${m.id===state.selectedMissionId?'selected':''}" style="left:${m.x}%; top:${m.y}%;" title="${escapeHtml(m.title)}">${m.icon || '🎯'}</div>`);
-    pin.onclick = (e)=>{ e.stopPropagation(); if(state.mapDragMoved) return; selectMission(m.id); };
+    if(m.is_hidden && !state.isAdmin) return; // never rendered for non-admins, period
+
+    const isLocked = !!m.lock_code && !state.isAdmin && !state.unlockedMissionIds.has(m.id);
+    const displayIcon = isLocked ? '🔒' : (m.icon || '🎯');
+    const classes = [
+      'mission-pin', 'status-' + m.status,
+      m.id === state.selectedMissionId ? 'selected' : '',
+      isLocked ? 'locked' : '',
+      (m.is_hidden && state.isAdmin) ? 'pin-hidden-admin' : '',
+    ].filter(Boolean).join(' ');
+    const pin = el(`<div class="${classes}" style="left:${m.x}%; top:${m.y}%;" title="${isLocked ? 'Locked transmission' : escapeHtml(m.title)}">${displayIcon}</div>`);
+    pin.onclick = (e)=>{
+      e.stopPropagation();
+      if(state.mapDragMoved) return;
+      if(isLocked){ openUnlockPrompt(m); return; }
+      selectMission(m.id);
+    };
     layer.appendChild(pin);
   });
 }
@@ -780,6 +835,52 @@ function renderDetailPanel(){
   });
 })();
 
+/* ---- scroll-wheel zoom (toward cursor) ---- */
+const MIN_ZOOM = 0.5, MAX_ZOOM = 4, ZOOM_STEP = 0.15;
+
+function updateZoomIndicator(){
+  document.getElementById('zoom-indicator').textContent = '🔍 ' + Math.round(state.mapZoom * 100) + '%';
+}
+
+function resetZoom(){
+  state.mapZoom = 1;
+  const container = document.getElementById('map-container');
+  container.style.width = '100%';
+  document.getElementById('map-wrap').scrollLeft = 0;
+  document.getElementById('map-wrap').scrollTop = 0;
+  updateZoomIndicator();
+}
+
+function applyZoom(newZoom, cursorX, cursorY){
+  const wrap = document.getElementById('map-wrap');
+  const container = document.getElementById('map-container');
+  newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+  if(newZoom === state.mapZoom) return;
+
+  const wrapRect = wrap.getBoundingClientRect();
+  const oldRect = container.getBoundingClientRect();
+  const cursorXInWrap = cursorX - wrapRect.left;
+  const cursorYInWrap = cursorY - wrapRect.top;
+  const fractionX = oldRect.width > 0 ? (wrap.scrollLeft + cursorXInWrap) / oldRect.width : 0.5;
+  const fractionY = oldRect.height > 0 ? (wrap.scrollTop + cursorYInWrap) / oldRect.height : 0.5;
+
+  state.mapZoom = newZoom;
+  container.style.width = (state.mapZoom * 100) + '%';
+
+  const newRect = container.getBoundingClientRect();
+  wrap.scrollLeft = fractionX * newRect.width - cursorXInWrap;
+  wrap.scrollTop = fractionY * newRect.height - cursorYInWrap;
+  updateZoomIndicator();
+}
+
+document.getElementById('map-wrap').addEventListener('wheel', (e)=>{
+  e.preventDefault();
+  const direction = e.deltaY > 0 ? -1 : 1;
+  applyZoom(state.mapZoom + direction * ZOOM_STEP, e.clientX, e.clientY);
+}, { passive:false });
+
+document.getElementById('zoom-indicator').addEventListener('click', resetZoom);
+
 /* map click → placement mode */
 document.getElementById('pins-layer').addEventListener('click', (e)=>{
   if(state.mapDragMoved) return;
@@ -822,6 +923,8 @@ function openMissionForm(mission, x, y){
   document.getElementById('mf-reward').value = mission ? mission.reward : '';
   document.getElementById('mf-risk').value = mission ? mission.risk : 'medium';
   document.getElementById('mf-status').value = mission ? mission.status : 'open';
+  document.getElementById('mf-lock-code').value = mission ? (mission.lock_code || '') : '';
+  document.getElementById('mf-hidden').checked = mission ? !!mission.is_hidden : false;
   document.getElementById('mf-error').textContent = '';
   document.getElementById('mf-delete-btn').classList.toggle('hidden-el', !mission);
   renderIconPicker();
@@ -851,6 +954,8 @@ document.getElementById('mf-save-btn').addEventListener('click', async ()=>{
     icon: state.selectedIcon,
     x: state.pendingCoords.x,
     y: state.pendingCoords.y,
+    lock_code: document.getElementById('mf-lock-code').value.trim() || null,
+    is_hidden: document.getElementById('mf-hidden').checked,
     updated_at: new Date().toISOString(),
   };
 
@@ -883,6 +988,40 @@ function deleteMission(mission){
     renderAdminMissionList();
   }, { title: 'Delete Mission' });
 }
+
+/* ============================================================================
+   UNLOCK PROMPT (for lock-code-protected blips)
+   ========================================================================== */
+let pendingUnlockMission = null;
+function openUnlockPrompt(m){
+  pendingUnlockMission = m;
+  document.getElementById('unlock-code-input').value = '';
+  document.getElementById('unlock-error').textContent = '';
+  document.getElementById('unlock-modal').classList.add('visible');
+}
+document.getElementById('unlock-cancel-btn').addEventListener('click', ()=>{
+  document.getElementById('unlock-modal').classList.remove('visible');
+  pendingUnlockMission = null;
+});
+document.getElementById('unlock-code-input').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') document.getElementById('unlock-submit-btn').click();
+});
+document.getElementById('unlock-submit-btn').addEventListener('click', ()=>{
+  if(!pendingUnlockMission) return;
+  const entered = document.getElementById('unlock-code-input').value.trim().toLowerCase();
+  const correct = (pendingUnlockMission.lock_code || '').trim().toLowerCase();
+  if(!entered || entered !== correct){
+    document.getElementById('unlock-error').textContent = 'INVALID CODE';
+    return;
+  }
+  state.unlockedMissionIds.add(pendingUnlockMission.id);
+  saveUnlockedIds(state.unlockedMissionIds);
+  const unlocked = pendingUnlockMission;
+  document.getElementById('unlock-modal').classList.remove('visible');
+  pendingUnlockMission = null;
+  renderPins();
+  selectMission(unlocked.id);
+});
 
 /* ============================================================================
    ADMIN LOGIN
@@ -972,7 +1111,7 @@ function renderAdminMissionList(){
     const item = el(`<div class="mission-list-item">
       <div class="ic">${m.icon || '🎯'}</div>
       <div class="info">
-        <div class="t">${escapeHtml(m.title)}</div>
+        <div class="t">${escapeHtml(m.title)}${m.is_hidden ? ' <span style="color:var(--dim);font-size:10px;">(HIDDEN)</span>' : ''}${m.lock_code ? ' <span style="color:var(--accent2);font-size:10px;">🔒 LOCKED</span>' : ''}</div>
         <div class="m">${escapeHtml(m.giver || 'Sovereign')} · ${riskIcon(m.risk)} ${riskLabel(m.risk)} · <span class="badge status-${m.status}" style="margin:0;">${statusIcon(m.status)} ${statusLabel(m.status)}</span></div>
       </div>
       <div class="acts"></div>

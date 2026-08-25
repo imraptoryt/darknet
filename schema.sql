@@ -1,16 +1,15 @@
 -- ============================================================================
--- SOVEREIGN MISSION TABLET — fresh schema
+-- SOVEREIGN MISSION TABLET — base schema
 --
--- This REPLACES the old chat-app schema entirely (per your "fresh start"
--- choice). Run this once, whole, in the Supabase SQL editor.
+-- This REPLACES any old chat-app schema entirely. Run this once, whole, in
+-- the Supabase SQL editor for your project (fgzmbkomdbggfqforxzn).
 --
--- Everything below is idempotent (safe to re-run) EXCEPT it will not
--- re-drop things twice — dropping is safe to re-run too since every drop
--- uses IF EXISTS.
+-- After this, also run migration_v2.sql (adds hide/lock-code support for
+-- blips). Both files are idempotent — safe to re-run.
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
--- 1. Drop the old chat-app schema
+-- 1. Drop any old chat-app schema (safe no-op if it never existed here)
 -- ---------------------------------------------------------------------------
 drop table if exists public.audit_log cascade;
 drop table if exists public.thread_reads cascade;
@@ -29,22 +28,13 @@ drop function if exists public.my_granted_category_ids() cascade;
 drop function if exists public.protect_founder_accounts_update() cascade;
 drop function if exists public.protect_founder_accounts_delete() cascade;
 
--- Supabase blocks direct SQL DELETE on storage.objects/storage.buckets
--- ("Direct deletion from storage tables is not allowed") — it has to go
--- through the Storage API instead. The old chat-images bucket is harmless
--- to leave in place (nothing in the new app references it), but if you want
--- it gone: Dashboard > Storage > chat-images > "..." > Delete bucket.
-
--- Old founder accounts (admin/ramsey) are left in auth.users untouched —
--- harmless leftovers. Delete them yourself in Supabase Dashboard >
--- Authentication > Users if you want them fully gone. They have no special
--- power in the new schema (see the RLS policies below: ANY authenticated
--- user is treated as an admin here, so if you keep admin/ramsey around,
--- their old passwords would also unlock the mission tablet's admin panel —
--- delete them if that's not what you want).
+-- Note: Supabase blocks direct SQL DELETE on storage.objects/storage.buckets
+-- ("Direct deletion from storage tables is not allowed"). If an old
+-- chat-images bucket exists, it's harmless to leave — delete it manually via
+-- Dashboard > Storage if you want it gone.
 
 -- ---------------------------------------------------------------------------
--- 2. New schema
+-- 2. Mission tablet schema
 -- ---------------------------------------------------------------------------
 create extension if not exists pgcrypto;
 
@@ -90,10 +80,6 @@ create policy app_settings_update on public.app_settings for update using (auth.
 insert into public.app_settings (id, map_image_url)
 values (1, 'https://imgg.fr/r/NesguhGF.png')
 on conflict (id) do nothing;
--- Note: "do nothing" means this won't overwrite map_image_url if the row
--- already exists from a previous run. The app also has this same URL baked
--- in as a client-side fallback, so the map shows either way. To change the
--- map later, just use the admin panel's Map tab.
 
 -- realtime (idempotent — only adds if not already a publication member)
 do $$
@@ -131,41 +117,24 @@ create policy "mission-map admin delete" on storage.objects
   for delete using (bucket_id = 'mission-map' and auth.role() = 'authenticated');
 
 -- ---------------------------------------------------------------------------
--- 3. Admin account — create this through the Supabase Dashboard, NOT SQL
+-- 3. Admin account — create through the Supabase Dashboard, NOT SQL
 --
--- Earlier versions of this script tried to insert/update the admin account
--- directly in auth.users via raw SQL (crypt()/gen_salt()). That turned out
--- to be unreliable — the password hash it wrote didn't verify correctly
--- against this project's Auth service ("Invalid login credentials" even
--- with the right password). Writing straight into auth.users bypasses
--- Supabase's own password-hashing path, so don't do it that way.
---
--- Instead, create the account through the Dashboard, which goes through
--- the real Auth API and is guaranteed to work:
+-- Writing directly into auth.users via raw SQL proved unreliable on this
+-- project (the password hash didn't verify). Create it the normal way:
 --
 --   1. Authentication > Users > "Add user" > "Create new user"
 --        Email:    sovereign-ops@tablet.local
 --        Password: raptor
---        ✅ Auto Confirm User (must be checked, or password login won't work)
+--        ✅ Auto Confirm User (must be checked)
 --   2. Save.
 --
--- (We switched the fixed email from sovereign-admin@tablet.local to
--- sovereign-ops@tablet.local — the first one got created with a broken
--- password via the old SQL approach and couldn't be deleted, so rather than
--- fight that, the app now points at a fresh email instead. The old broken
--- account is harmless to leave sitting there — its password doesn't work
--- for anyone, including you.)
---
--- That's it — no SQL needed for this step. The app only ever asks for the
--- password (via the hidden corner button); the email is fixed in the code
--- and never shown in the UI.
+-- The app only ever asks for the password (hidden corner dot); the email is
+-- fixed in the code and never shown in the UI.
 -- ---------------------------------------------------------------------------
 
 -- ============================================================================
--- Done. Sanity check:
+-- Done. Now also run migration_v2.sql.
+-- Sanity check:
 --   select * from public.app_settings;
 --   select * from public.missions;
---
--- Don't forget step 3 above (create the admin account via the Dashboard,
--- not SQL) — this script no longer touches auth.users at all.
 -- ============================================================================
