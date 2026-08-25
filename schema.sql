@@ -87,7 +87,13 @@ create policy app_settings_select on public.app_settings for select using (true)
 drop policy if exists app_settings_update on public.app_settings;
 create policy app_settings_update on public.app_settings for update using (auth.role() = 'authenticated');
 
-insert into public.app_settings (id) values (1) on conflict (id) do nothing;
+insert into public.app_settings (id, map_image_url)
+values (1, 'https://imgg.fr/r/NesguhGF.png')
+on conflict (id) do nothing;
+-- Note: "do nothing" means this won't overwrite map_image_url if the row
+-- already exists from a previous run. The app also has this same URL baked
+-- in as a client-side fallback, so the map shows either way. To change the
+-- map later, just use the admin panel's Map tab.
 
 -- realtime (idempotent — only adds if not already a publication member)
 do $$

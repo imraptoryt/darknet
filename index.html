@@ -142,9 +142,9 @@
   #detail-panel .admin-row{ display:flex; gap:8px; margin-top:20px; }
 
   /* hidden admin trigger */
-  #hidden-admin-btn{ position:fixed; bottom:10px; right:10px; width:16px; height:16px; border-radius:50%;
-    background:rgba(255,106,26,0.12); border:1px solid rgba(255,106,26,0.15); cursor:pointer; z-index:30; padding:0; }
-  #hidden-admin-btn:hover{ background:rgba(255,106,26,0.35); }
+  #hidden-admin-btn{ position:fixed; bottom:10px; right:10px; width:18px; height:18px; border-radius:50%;
+    background:transparent; border:none; cursor:pointer; z-index:30; padding:0; }
+  #hidden-admin-btn:hover{ background:rgba(255,106,26,0.28); }
   #admin-badge{ position:fixed; bottom:10px; right:36px; z-index:30; display:flex; gap:6px; align-items:center; background:var(--panel2); border:1px solid var(--accent-dim); padding:6px 10px; font-size:10.5px; letter-spacing:1px; color:var(--accent2); }
 
   /* ---------------- MODALS ---------------- */
@@ -315,7 +315,16 @@
     </div>
 
     <div class="admin-tab-panel active" id="admin-tab-missions">
-      <button class="btn small" id="admin-place-mission-btn" style="margin-bottom:14px;">📍 Place New Mission</button>
+      <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+        <button class="btn small" id="admin-place-mission-btn">📍 Place New Mission</button>
+        <select id="admin-mission-filter" style="width:auto; min-width:160px;">
+          <option value="all">All Missions</option>
+          <option value="open">Open</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+        </select>
+      </div>
       <div id="admin-mission-list"></div>
     </div>
 
@@ -370,6 +379,7 @@ const SUPABASE_URL = "https://taawronqapxbhndqwfng.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_7JdOFQql8jafMJz_SnwOTQ_h_Wvb1RP";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const ADMIN_EMAIL = "sovereign-admin@tablet.local";
+const DEFAULT_MAP_URL = "https://imgg.fr/r/NesguhGF.png";
 const ICONS = ["🎯","📦","🔫","💰","⚠️","🚨","🛠️","🗝️","🚗","☠️"];
 
 /* ============================================================================
@@ -501,20 +511,21 @@ function hideLockout(){
    ========================================================================== */
 async function boot(){
   await loadSettings();
-  const { data } = await sb.auth.getSession();
-  state.session = data.session;
-  state.isAdmin = !!data.session;
+
+  // Never start already authenticated as admin, even if a Supabase session
+  // token is still sitting in this browser from a previous visit — the
+  // admin panel must always be reached fresh via the hidden button + password.
+  await sb.auth.signOut().catch(()=>{});
+  state.session = null;
+  state.isAdmin = false;
 
   subscribeSettingsRealtime();
 
-  if(state.settings.self_destruct && !state.isAdmin){
+  if(state.settings.self_destruct){
     showLockout();
     return;
   }
-  if(state.isAdmin){
-    await enterTablet();
-  }
-  // else: splash screen (already visible by default) waits for Connect click
+  // splash screen (already visible by default) waits for Connect click
 }
 
 document.getElementById('connect-btn').addEventListener('click', ()=>{
@@ -536,11 +547,17 @@ async function enterTablet(){
 function applyMapImage(){
   const img = document.getElementById('map-image');
   const placeholder = document.getElementById('map-placeholder');
-  if(state.settings.map_image_url){
-    img.src = state.settings.map_image_url;
+  const url = state.settings.map_image_url || DEFAULT_MAP_URL;
+  if(url){
+    img.onerror = ()=>{
+      img.classList.add('hidden-el');
+      placeholder.classList.remove('hidden-el');
+      renderPins();
+    };
+    img.onload = ()=>{ renderPins(); };
+    img.src = url;
     img.classList.remove('hidden-el');
     placeholder.classList.add('hidden-el');
-    img.onload = ()=>{ renderPins(); };
   } else {
     img.classList.add('hidden-el');
     placeholder.classList.remove('hidden-el');
@@ -815,17 +832,19 @@ document.getElementById('admin-place-mission-btn').addEventListener('click', ()=
 
 function renderAdminMissionList(){
   const wrap = document.getElementById('admin-mission-list');
+  const filter = document.getElementById('admin-mission-filter').value;
   wrap.innerHTML = '';
-  if(state.missions.length === 0){
-    wrap.appendChild(el(`<div style="color:var(--dim); font-size:12px;">No missions placed yet.</div>`));
+  const filtered = state.missions.filter(m => filter === 'all' || m.status === filter).slice().reverse();
+  if(filtered.length === 0){
+    wrap.appendChild(el(`<div style="color:var(--dim); font-size:12px;">No missions ${filter === 'all' ? 'placed yet' : 'with this status'}.</div>`));
     return;
   }
-  state.missions.slice().reverse().forEach(m=>{
+  filtered.forEach(m=>{
     const item = el(`<div class="mission-list-item">
       <div class="ic">${m.icon || '🎯'}</div>
       <div class="info">
         <div class="t">${escapeHtml(m.title)}</div>
-        <div class="m">${escapeHtml(m.giver || 'Sovereign')} · ${riskLabel(m.risk)} · ${statusLabel(m.status)}</div>
+        <div class="m">${escapeHtml(m.giver || 'Sovereign')} · ${riskLabel(m.risk)} · <span class="badge status-${m.status}" style="margin:0;">${statusLabel(m.status)}</span></div>
       </div>
       <div class="acts"></div>
     </div>`);
@@ -838,6 +857,7 @@ function renderAdminMissionList(){
     wrap.appendChild(item);
   });
 }
+document.getElementById('admin-mission-filter').addEventListener('change', renderAdminMissionList);
 
 /* ---- map upload ---- */
 document.getElementById('map-upload-input').addEventListener('change', async (e)=>{
