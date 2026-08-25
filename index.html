@@ -30,13 +30,19 @@
     mix-blend-mode:overlay;
   }
   #grid-bg{ position:fixed; inset:0; z-index:0;
-    background-image:
-      linear-gradient(rgba(255,106,26,0.07) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,106,26,0.07) 1px, transparent 1px);
-    background-size:42px 42px;
-    -webkit-mask-image:radial-gradient(ellipse at center, black 0%, transparent 75%);
-            mask-image:radial-gradient(ellipse at center, black 0%, transparent 75%);
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(255,106,26,0.10) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 80%, rgba(255,106,26,0.07) 0%, transparent 55%),
+      var(--bg);
   }
+  #grid-bg::before{
+    content:''; position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(255,106,26,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,106,26,0.08) 1px, transparent 1px);
+    background-size:42px 42px;
+  }
+  #particles-bg{ position:fixed; inset:0; z-index:1; pointer-events:none; }
 
   .glow-text{ text-shadow:0 0 8px rgba(255,106,26,0.65), 0 0 22px rgba(255,106,26,0.3); }
   .btn{ font-family:'Share Tech Mono', monospace; letter-spacing:1px; text-transform:uppercase; cursor:pointer;
@@ -185,6 +191,7 @@
 <body>
 
 <div id="grid-bg"></div>
+<canvas id="particles-bg"></canvas>
 
 <!-- ============ SPLASH ============ -->
 <div id="splash-screen">
@@ -443,6 +450,46 @@ document.getElementById('confirm-modal-cancel').addEventListener('click', ()=>{
 });
 
 /* ============================================================================
+   ANIMATED BACKGROUND — small drifting squares
+   ========================================================================== */
+(function particlesBG(){
+  const canvas = document.getElementById('particles-bg');
+  const ctx = canvas.getContext('2d');
+  let w, h, squares;
+  function spawnSquare(){
+    return {
+      x: Math.random() * w,
+      y: Math.random() * h,
+      size: 2 + Math.random() * 5,
+      vx: (Math.random() - 0.5) * 0.28,
+      vy: (Math.random() - 0.5) * 0.28,
+      alpha: 0.12 + Math.random() * 0.35,
+      hue: Math.random() < 0.15 ? '57,208,255' : '255,106,26',
+    };
+  }
+  function resize(){
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+    const count = Math.min(90, Math.round((w * h) / 22000));
+    squares = Array.from({ length: count }, spawnSquare);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  function draw(){
+    ctx.clearRect(0, 0, w, h);
+    squares.forEach(s => {
+      s.x += s.vx; s.y += s.vy;
+      if(s.x < -10) s.x = w + 10; if(s.x > w + 10) s.x = -10;
+      if(s.y < -10) s.y = h + 10; if(s.y > h + 10) s.y = -10;
+      ctx.fillStyle = `rgba(${s.hue},${s.alpha})`;
+      ctx.fillRect(s.x, s.y, s.size, s.size);
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ============================================================================
    CLOCK
    ========================================================================== */
 function tickClock(){
@@ -458,6 +505,13 @@ const HACK_LINES = [
   ["PROBING PERIMETER DEFENSES...", null],
   ["ATELIS NETWORK ACCESS ... [BLOCKED]", 'blocked'],
   ["CERBERUS ICE COUNTERMEASURES ... [BLOCKED]", 'blocked'],
+  ["ПОПЫТКА ОБХОДА ЧЕРЕЗ РЕЗЕРВНЫЙ УЗЕЛ...", null],
+  ["ДОСТУП К СЕРВЕРАМ ATELIS ... [ОТКАЗАНО]", 'blocked'],
+  ["ПРОТОКОЛ CERBERUS ОБНАРУЖЕН ... [БЛОКИРОВКА]", 'blocked'],
+  ["ПЕРЕНАПРАВЛЕНИЕ ЧЕРЕЗ ТЕНЕВОЙ УЗЕЛ...", null],
+  ["ШИФРОВАНИЕ КАНАЛА СВЯЗИ...", null],
+  ["ПРОВЕРКА ПОДЛИННОСТИ ПОЛЬЗОВАТЕЛЯ...", null],
+  ["ДОСТУП РАЗРЕШЁН — СОЕДИНЕНИЕ ЗАЩИЩЕНО", 'ok'],
   ["REROUTING TRAFFIC THROUGH GHOST RELAYS...", null],
   ["ESTABLISHING SECURE CHANNEL...", null],
   ["ENCRYPTION HANDSHAKE COMPLETE", 'ok'],
